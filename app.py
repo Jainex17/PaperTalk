@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from google import genai
 from pydantic import BaseModel
+import os
+
 from config.config import Settings
+from pdf_utils import extract_text, chunk_text
 
 app = FastAPI(title="PaperTalk")
 settings = Settings()
@@ -21,3 +24,16 @@ def ask(body: AskBody):
         model="gemini-2.5-flash", contents=body.query
     )
     return {"res": res.text}
+
+@app.post("/readpdf")
+def read_pdf(file: UploadFile = File(...)):
+    file_location = f"temp_{file.filename}"
+    with open(file_location, "wb") as f:
+        f.write(file.file.read())
+
+    text = extract_text(file_location)
+    chunks = chunk_text(text)
+
+    os.remove(file_location)
+
+    return chunks
