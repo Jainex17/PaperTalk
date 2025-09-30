@@ -20,7 +20,7 @@ PaperTalk lets you upload multiple documents (PDF, DOCX, TXT) and ask questions 
 ### How can it be improved?
 - Currently, only the backend is built; a frontend can be added.
 - More features like summarization, keyword extraction, etc. can be included.
-- All documents are currently in one place; we can add different chats or projects (like ChatGPT) so users can keep their documents and chats organized.
+- All documents are currently in one place; we can add different chats or projects (like ChatGPT) so users can keep their documents and chats organized.(done)
 - Simple authentication, chat storage, and other features can be added.
 
 ---

@@ -3,17 +3,16 @@ from google import genai
 from pydantic import BaseModel
 import os
 
-from config.config import Settings
+from config.config import settings
 from pdf_utils import extract_text, chunk_text
 from vector_store import add_document, query_documents
 
 app = FastAPI(title="PaperTalk")
-settings = Settings()
 client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 @app.get("/")
 def hello():
-    return "running..."
+    return "runing.."
 
 class AskBody(BaseModel):
     space: str
@@ -39,8 +38,17 @@ def read_pdf(space: str = Form(...), file: UploadFile = File(...)):
         f.write(file.file.read())
 
     text = extract_text(file_location)
+    if text is None:
+        return {"error": "Failed to extract text from PDF"}
+
     chunks = chunk_text(text)
     add_document(chunks, space)
 
     os.remove(file_location)
     return chunks
+
+@app.post("/search")
+def search(body: AskBody):
+    result = query_documents(body.query, 3, body.space)
+
+    return result
