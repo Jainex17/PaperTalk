@@ -29,6 +29,18 @@ PaperTalk lets you upload multiple documents (PDF, DOCX, TXT) and ask questions 
 - Create and activate a virtual environment (`python -m venv venv && source venv/bin/activate`)
 - Install the requirements (`pip install -r requirements.txt`)
 - Set the environment variables (`cp .env.example .env` and fill in the values)
+- Init the database by creating the tables
+```
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE documents (
+    id SERIAL PRIMARY KEY,
+    doc_id TEXT UNIQUE,
+    space TEXT,
+    text TEXT,
+    embedding VECTOR(768)
+);
+```
 - Run the app (`uvicorn main:app --reload`)
 
 ---
