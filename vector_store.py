@@ -14,7 +14,9 @@ Base = declarative_base()
 class Document(Base):
     __tablename__ = "documents"
     id = Column(Integer, primary_key=True)
-    doc_id = Column(String, unique=True, nullable=False)
+    doc_id = Column(String, nullable=False)
+    original_file_id = Column(String, nullable=False)
+    chunk_index = Column(Integer, nullable=False)
     space = Column(String, nullable=False)
     text = Column(Text, nullable=False)
     embedding = Column(Vector(768), nullable=False) 
@@ -22,17 +24,31 @@ class Document(Base):
 Base.metadata.create_all(engine)
 embed_model = SentenceTransformer("all-mpnet-base-v2")
 
-def add_document(chunks, space="default"):
+def add_document(chunks, space="default", filename=None):
     file_id = str(uuid.uuid4()) 
     session = SessionLocal()
     
-    for i, chunk in enumerate(chunks):
-        embedding = embed_model.encode(chunk).tolist()
-        doc = Document(doc_id=f"doc_{file_id}_{i}", text=chunk, space=space, embedding=embedding)
-        session.add(doc)
+    try:
+        for i, chunk in enumerate(chunks):
+            embedding = embed_model.encode(chunk).tolist()
+            doc = Document(
+                doc_id=f"doc_{file_id}_{i}",
+                original_filename=filename,
+                chunk_index=i,
+                text=chunk, 
+                space=space, 
+                embedding=embedding
+            )
+            session.add(doc)
 
-    session.commit()
-    session.close()
+        session.commit()
+        session.close()
+        return file_id
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
         
 
 def query_documents(query, top_k=3, space="default"):

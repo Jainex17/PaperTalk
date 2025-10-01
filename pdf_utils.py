@@ -21,11 +21,15 @@ def extract_text(file_path: str):
     else:
         raise ValueError("Unsupported file type. Only .pdf and .txt are allowed.")
 
-def chunk_text(text: str, chunk_size=500):
+def chunk_text(text: str, chunk_size=500, overlap=50):
     words = text.split()
     chunks = []
-
-    for i in range(0, len(words), chunk_size):
-        chunks.append(" ".join(words[i:i+chunk_size]))
+    
+    for i in range(0, len(words), chunk_size - overlap):
+        end_idx = min(i + chunk_size, len(words))
+        chunks.append(" ".join(words[i:end_idx]))
+        
+        if end_idx >= len(words):
+            break
     
     return chunks
