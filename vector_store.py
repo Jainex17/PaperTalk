@@ -19,7 +19,7 @@ class Document(Base):
     chunk_index = Column(Integer, nullable=False)
     space = Column(String, nullable=False)
     text = Column(Text, nullable=False)
-    embedding = Column(Vector(768), nullable=False) 
+    embedding = Column(Vector(768), nullable=False)
 
 Base.metadata.create_all(engine)
 embed_model = SentenceTransformer("all-mpnet-base-v2")
@@ -33,9 +33,9 @@ def add_document(chunks, space="default", filename=None):
             embedding = embed_model.encode(chunk).tolist()
             doc = Document(
                 doc_id=f"doc_{file_id}_{i}",
-                original_filename=filename,
+                original_file_id=filename,
                 chunk_index=i,
-                text=chunk, 
+                text=chunk,
                 space=space, 
                 embedding=embedding
             )

@@ -28,14 +28,23 @@ def ask(body: AskBody):
 
         context_parts = []
         sources = []
+        max_context_length = 4000
 
+        current_length = 0
         for i, chunk in enumerate(relevant_chunks, 1):
-            context_parts.append(
-                f"[Source {i} - Document: {chunk['doc_id']}]\n{chunk['text']}"
-            )
+            chunk_text = chunk['text']
+            if len(chunk_text) > 1500:
+                chunk_text = chunk_text[:1500] + "..."
+            
+            chunk_context = f"[Source {i} - Document: {chunk['doc_id']}]\n{chunk_text}"
+            if current_length + len(chunk_context) > max_context_length:
+                break
+            
+            context_parts.append(chunk_context)
+            current_length += len(chunk_context)
             sources.append({
                 "doc_id": chunk['doc_id'],
-                "relevance_score": chunk.get('score', 'N/A')
+                "relevance_score": chunk.get('distance', 'N/A')
             })
 
         context = "\n\n---\n\n".join(context_parts)
@@ -62,6 +71,12 @@ def ask(body: AskBody):
     
 @app.post("/uploadpdf")
 def read_pdf(space: str = Form(...), file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(('.pdf', '.txt')):
+        return {"error": "Unsupported file type"}, 400
+    
+    if file.size > 10 * 1024 * 1024:
+        return {"error": "File too large"}, 400
+    
     file_location = f"temp_{file.filename}"
     with open(file_location, "wb") as f:
         f.write(file.file.read())
@@ -78,6 +93,21 @@ def read_pdf(space: str = Form(...), file: UploadFile = File(...)):
 
 @app.post("/search")
 def search(body: AskBody):
-    result = query_documents(body.query, 3, body.space)
+    try:
+        results = query_documents(body.query, 3, body.space)
+        if not results:
+            return {
+                "query": body.query,
+                "results": [],
+                "count": 0,
+                "message": "No relevant documents found"
+            }
 
-    return result
+        return {
+                "query": body.query,
+                "results": results,
+                "count": len(results),
+                "space": body.space
+        }
+    except Exception as e:
+        return {"error": str(e)}, 500
