@@ -2,12 +2,22 @@ from fastapi import FastAPI, UploadFile, File, Form
 from google import genai
 from pydantic import BaseModel
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 from config.config import settings
 from pdf_utils import extract_text, chunk_text
 from vector_store import add_document, query_documents
 
 app = FastAPI(title="PaperTalk")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.FRONTEND_URL],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
+
 client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 @app.get("/")
