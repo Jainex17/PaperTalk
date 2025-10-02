@@ -8,7 +8,7 @@ import tiktoken
 from config.config import settings
 from pdf_utils import extract_text, chunk_text
 from vector_store import upload_document, query_documents
-from db_utils import get_all_spaces
+from db_utils import get_all_spaces, get_documents_by_space
 
 app = FastAPI(title="PaperTalk")
 
@@ -140,3 +140,8 @@ def get_spaces():
     spaces = get_all_spaces()
 
     return spaces
+
+@app.get("/getdocuments/{space_id}")
+def get_documents(space_id: str):
+    documents = get_documents_by_space(space_id)
+    return {"documents": documents}

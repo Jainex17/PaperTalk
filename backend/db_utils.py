@@ -13,6 +13,7 @@ class Spaces(Base):
     __tablename__ = "spaces"
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
+    created_at = Column(String, nullable=False)
 
 class Document(Base):
     __tablename__ = "documents"
@@ -33,9 +34,25 @@ def get_all_spaces():
         
         spaces = []
         for row in result:
-            spaces.append({"id": row.id, "name": row.name})
+            spaces.append({"id": row.id, "name": row.name, "created_at": row.created_at})
 
         return spaces
+    except Exception as e:
+        print("err :( ", e)
+        return []
+    finally:
+        session.close()
+
+def get_documents_by_space(space_id: str):
+    session = SessionLocal()
+    try:
+        result = session.query(Document).filter(Document.space_id == space_id).all()
+        
+        unique_documents = set()
+        for row in result:
+            unique_documents.add(row.original_file_id)
+
+        return unique_documents
     except Exception as e:
         print("err :( ", e)
         return []

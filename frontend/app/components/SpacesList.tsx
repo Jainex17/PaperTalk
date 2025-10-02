@@ -1,12 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-interface SpacesListProps {
-  spaces: string[];
-  onCreateSpace: (name: string) => void;
-  onSelectSpace: (name: string) => void;
+interface Space {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
 const cardColors = [
@@ -20,14 +20,32 @@ const cardColors = [
   'bg-gradient-to-br from-amber-200/40 to-amber-300/30',
 ];
 
-export function SpacesList({ spaces, onCreateSpace, onSelectSpace }: SpacesListProps) {
-  
+export function SpacesList() {
+  const [spaces, setSpaces] = useState<Space[]>([]);
   const router = useRouter();
 
   const handleCreateNewSpace = () => {
     const uuid = crypto.randomUUID();
     router.push('/space/' + uuid);
   };
+
+  function getSpaces()  {
+    const res = fetch('http://localhost:8000/spaces', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((data) => {
+          console.log(data);
+        setSpaces(data);
+      })
+      .catch((error) => {
+        console.error('Error fetching spaces:', error);
+      });
+  }
+
+  useEffect(() => {
+    getSpaces();
+  }, []);
+
+
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -57,28 +75,21 @@ export function SpacesList({ spaces, onCreateSpace, onSelectSpace }: SpacesListP
               <span className="text-card-foreground font-medium font-sans">Create New Space</span>
             </button>
 
-            {spaces.map((space, index) => (
+            {spaces && spaces.map((space, idx) => (
               <button
-                key={space}
-                onClick={() => onSelectSpace(space)}
+                key={idx}
+                onClick={() => router.push('/space/' + space.id)}
                 className={`${
-                  cardColors[index % cardColors.length]
-                } rounded-2xl p-6 border border-border hover:border-primary transition-all duration-200 text-left flex flex-col justify-between h-48 group relative overflow-hidden`}
+                  cardColors[Math.floor(Math.random() * cardColors.length-1)]
+                } rounded-2xl p-6 cursor-pointer border border-border hover:border-primary transition-all duration-200 text-left flex flex-col justify-between h-48 group relative overflow-hidden`}
                 style={{ boxShadow: 'var(--shadow-sm)' }}
               >
                 <div className="flex-1">
                   <div className="text-3xl mb-3">📄</div>
-                  <h3 className="text-lg font-medium text-foreground line-clamp-2 font-serif">{space}</h3>
+                  <h3 className="text-lg font-medium text-foreground line-clamp-2 font-serif">{space.name}</h3>
                 </div>
                 <div className="text-sm text-muted-foreground mt-2 font-sans">
-                  {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </div>
-                <div className="absolute top-4 right-4 w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <svg className="w-4 h-4 text-muted-foreground" fill="currentColor" viewBox="0 0 16 16">
-                    <circle cx="8" cy="3" r="1.5"/>
-                    <circle cx="8" cy="8" r="1.5"/>
-                    <circle cx="8" cy="13" r="1.5"/>
-                  </svg>
+                  {new Date(space.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                 </div>
               </button>
             ))}

@@ -33,6 +33,7 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingDocuments, setLoadingDocuments] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +41,30 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const getDocuments = async () => {
+    setLoadingDocuments(true);
+    try {
+      const response = await fetch(`http://localhost:8000/getdocuments/${spaceid}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
+      }
+      const data = await response.json();
+      const docs: Document[] = data.documents.map((doc: any) => ({
+        name: doc,
+        isUploading: false
+      }));
+      setDocuments(docs);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
+  useEffect(() => {
+    getDocuments();
+  }, [spaceid]);
 
   const getFileType = (filename: string): string => {
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -173,7 +198,7 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                       const colors = ['bg-green-500', 'bg-blue-500', 'bg-gray-500'];
                       return (
                         <div key={i} className={`w-6 h-6 ${colors[i]} rounded-md flex items-center justify-center border-2 border-secondary`}>
-                          <FileText className="w-3.5 h-3.5 text-white" />
+                          <FileText className="w-4 text-white" />
                         </div>
                       );
                     })}
@@ -284,14 +309,14 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               }}
             >
               <div className="bg-card rounded-2xl p-8 w-full max-w-4xl h-[50vh] flex flex-col" style={{ boxShadow: 'var(--shadow-2xl)' }}>
-                <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-semibold text-card-foreground">Project files</h2>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       className="px-4 py-2 border border-border flex items-center justify-center bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-all text-md font-medium"
                     >
-                      <Plus className="w-4 h-4 inline-block mr-2" />
+                      <Plus className="w-4 h-4 mr-2" />
                       <span>Add files</span>
                     </button>
                     <button
@@ -321,7 +346,22 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                     </div>
                   )}
 
-                  {documents.length > 0 ? (
+                  {loadingDocuments ? (
+                    <div className="grid gap-2">
+                      {[...Array(3)].map((_, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-4 p-2 border border-border/50 rounded-xl animate-pulse"
+                        >
+                          <div className="w-12 h-12 rounded-lg bg-muted flex-shrink-0" />
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="h-4 bg-muted rounded w-3/4" />
+                            <div className="h-3 bg-muted rounded w-1/4" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : documents.length > 0 ? (
                     <div className="grid gap-2">
                       {documents.map((doc, index) => (
                         <motion.div
@@ -344,14 +384,6 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                               {doc.type}
                             </p>
                           </div>
-                          {!doc.isUploading && (
-                            <button
-                              onClick={() => setDocuments(documents.filter((_, i) => i !== index))}
-                              className="p-2 hover:bg-destructive/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <Trash className="w-4 h-4 text-destructive" />
-                            </button>
-                          )}
                         </motion.div>
                       ))}
                     </div>
