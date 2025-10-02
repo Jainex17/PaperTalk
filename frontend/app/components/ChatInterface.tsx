@@ -4,11 +4,17 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, X, FileText, Loader2, Trash, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface Source {
+  doc_id: string;
+  relevance_score: number | string;
+}
+
 interface Message {
   id: string;
   type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  sources?: Source[];
 }
 
 interface Document {
@@ -18,7 +24,11 @@ interface Document {
   isUploading?: boolean;
 }
 
-export function ChatInterface() {
+interface ChatInterfaceProps {
+  spaceid: string;
+}
+
+export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [input, setInput] = useState('');
@@ -38,6 +48,61 @@ export function ChatInterface() {
     return 'Document';
   };
 
+  const handleSendMessage = async () => {
+    if (!input.trim() || loading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: input,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8000/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          space_id: spaceid,
+          query: input,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const data = await response.json();
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: data.answer,
+        timestamp: new Date(),
+        sources: data.sources,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: 'Sorry, I encountered an error processing your request. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile && (selectedFile.type === 'application/pdf' || selectedFile.type === 'text/plain')) {
@@ -51,8 +116,26 @@ export function ChatInterface() {
 
       setDocuments([...documents, newDoc]);
 
-      // Simulate upload delay
-      setTimeout(() => {
+      try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('space_id', spaceid);
+        formData.append('file', selectedFile);
+
+        // Upload to backend
+        const response = await fetch('http://localhost:8000/uploadpdf', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Upload failed');
+        }
+
+        const result = await response.json();
+        console.log('Upload successful:', result);
+
+        // Update document state to remove uploading status
         setDocuments(prev =>
           prev.map(doc =>
             doc.name === selectedFile.name
@@ -60,7 +143,12 @@ export function ChatInterface() {
               : doc
           )
         );
-      }, 2000);
+      } catch (error) {
+        console.error('Upload error:', error);
+        // Remove document from list if upload fails
+        setDocuments(prev => prev.filter(doc => doc.name !== selectedFile.name));
+        alert('Failed to upload file. Please try again.');
+      }
 
       // Reset file input
       if (fileInputRef.current) {
@@ -107,11 +195,13 @@ export function ChatInterface() {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                     placeholder="Ask anything about your documents..."
                     disabled={loading}
                     className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground"
                   />
                   <button
+                    onClick={handleSendMessage}
                     disabled={!input.trim() || loading}
                     className="px-3 py-3 bg-primary cursor-pointer text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
@@ -147,6 +237,36 @@ export function ChatInterface() {
           </div>
         )}
       </div>
+
+      {/* Input box when messages exist */}
+      {messages.length > 0 && (
+        <div className="border-t border-border bg-background">
+          <div className="max-w-3xl mx-auto p-4">
+            <div className="flex gap-3 bg-muted rounded-2xl p-2" style={{ boxShadow: 'var(--shadow-lg)' }}>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder="Ask a follow-up question..."
+                disabled={loading}
+                className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground"
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={!input.trim() || loading}
+                className="px-3 py-3 bg-primary cursor-pointer text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {loading ? (
+                  <span className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Upload Dialog */}
       <AnimatePresence>

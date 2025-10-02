@@ -1,17 +1,22 @@
 from sentence_transformers import SentenceTransformer
-from sqlalchemy import func, cast
+from sqlalchemy import func, cast, text
 from pgvector.sqlalchemy import Vector
 import uuid
 
-from db_utils import SessionLocal, Document
+from db_utils import SessionLocal, Document, Spaces
 
 embed_model = SentenceTransformer("all-mpnet-base-v2")
 
-def add_document(chunks, space="default", filename=None):
+def upload_document(chunks, space_id, filename=None):
     file_id = str(uuid.uuid4()) 
     session = SessionLocal()
     
     try:
+        space_exists = session.query(Spaces).filter_by(id=space_id).scalar()
+        if not space_exists:
+            session.execute(text("INSERT INTO spaces (id, name) VALUES (:id, :name)"), {"id": space_id, "name": "Untitled Space"})
+            session.commit()
+
         for i, chunk in enumerate(chunks):
             embedding = embed_model.encode(chunk).tolist()
             doc = Document(
@@ -19,7 +24,7 @@ def add_document(chunks, space="default", filename=None):
                 original_file_id=filename,
                 chunk_index=i,
                 text=chunk,
-                space=space, 
+                space_id=space_id,
                 embedding=embedding
             )
             session.add(doc)
@@ -34,7 +39,7 @@ def add_document(chunks, space="default", filename=None):
         session.close()
         
 
-def query_documents(query, top_k=3, space="default"):
+def query_documents(query, top_k=3, space_id="default"):
     query_embedding = embed_model.encode([query])[0].tolist()
     session = SessionLocal()
 
@@ -44,7 +49,7 @@ def query_documents(query, top_k=3, space="default"):
             Document.text,
             func.l2_distance(Document.embedding, cast(query_embedding, Vector(768))).label("distance")
         )
-        .filter(Document.space == space)
+        .filter(Document.space_id == space_id)
         .order_by("distance")
         .limit(top_k)
         .all()

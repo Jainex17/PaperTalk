@@ -7,7 +7,7 @@ import tiktoken
 
 from config.config import settings
 from pdf_utils import extract_text, chunk_text
-from vector_store import add_document, query_documents
+from vector_store import upload_document, query_documents
 from db_utils import get_all_spaces
 
 app = FastAPI(title="PaperTalk")
@@ -27,14 +27,17 @@ def hello():
     return "runing.."
 
 class AskBody(BaseModel):
-    space: str
+    space_id: str
     query: str
 
 @app.post("/ask")
 def ask(body: AskBody):
+    if not body.query or not body.space_id:
+        return {"error": "Both 'query' and 'space_id' are required"}, 400
+
     try:
         encoder = tiktoken.get_encoding("cl100k_base")
-        relevant_chunks = query_documents(body.query, top_k=3, space=body.space)
+        relevant_chunks = query_documents(body.query, top_k=3, space_id=body.space_id)
 
         if not relevant_chunks:
             return {"answer": "No relevant information found.", "sources": []}
@@ -60,7 +63,7 @@ def ask(body: AskBody):
             })
 
         context = "\n\n---\n\n".join(context_parts)
-
+        print(context)
         prompt = f"""Answer the question based on the following context. If the answer isn't in the context, say so. Context: {context} Question: {body.query} Answer:"""
 
         res = client.models.generate_content(
@@ -88,7 +91,10 @@ def ask(body: AskBody):
         return {"error": "An error occurred processing your request"}, 500
     
 @app.post("/uploadpdf")
-def read_pdf(space: str = Form(...), file: UploadFile = File(...)):
+def read_pdf(space_id: str = Form(...), file: UploadFile = File(...)):
+    if not space_id:
+        return {"error": "Space ID is required"}, 400
+
     if not file.filename.lower().endswith(('.pdf', '.txt')):
         return {"error": "Unsupported file type"}, 400
     
@@ -104,7 +110,7 @@ def read_pdf(space: str = Form(...), file: UploadFile = File(...)):
         return {"error": "Failed to extract text from PDF"}
 
     chunks = chunk_text(text)
-    file_id = add_document(chunks, space, file.filename)
+    file_id = upload_document(chunks, space_id, file.filename)
 
     os.remove(file_location)
     return {"fileid": file_id, "chunk_count": len(chunks)}
@@ -112,7 +118,7 @@ def read_pdf(space: str = Form(...), file: UploadFile = File(...)):
 @app.post("/search")
 def search(body: AskBody):
     try:
-        results = query_documents(body.query, 3, body.space)
+        results = query_documents(body.query, 3, body.space_id)
         if not results:
             return {
                 "query": body.query,
@@ -124,8 +130,7 @@ def search(body: AskBody):
         return {
                 "query": body.query,
                 "results": results,
-                "count": len(results),
-                "space": body.space
+                "count": len(results)
         }
     except Exception as e:
         return {"error": str(e)}, 500

@@ -8,7 +8,7 @@ async function SpacePage({ params }: { params: Promise<SpacePageProps> }) {
 
     const { spaceid } = await params;
     return(
-        <ChatInterface />
+        <ChatInterface spaceid={spaceid as string} />
     )
 }
 
