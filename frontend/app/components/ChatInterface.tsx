@@ -106,7 +106,6 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile && (selectedFile.type === 'application/pdf' || selectedFile.type === 'text/plain')) {
-      // Create document with uploading state
       const newDoc: Document = {
         name: selectedFile.name,
         uploadedAt: new Date(),
@@ -117,12 +116,10 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
       setDocuments([...documents, newDoc]);
 
       try {
-        // Create FormData for file upload
         const formData = new FormData();
         formData.append('space_id', spaceid);
         formData.append('file', selectedFile);
 
-        // Upload to backend
         const response = await fetch('http://localhost:8000/uploadpdf', {
           method: 'POST',
           body: formData,
@@ -135,7 +132,6 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
         const result = await response.json();
         console.log('Upload successful:', result);
 
-        // Update document state to remove uploading status
         setDocuments(prev =>
           prev.map(doc =>
             doc.name === selectedFile.name
@@ -145,12 +141,10 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
         );
       } catch (error) {
         console.error('Upload error:', error);
-        // Remove document from list if upload fails
         setDocuments(prev => prev.filter(doc => doc.name !== selectedFile.name));
         alert('Failed to upload file. Please try again.');
       }
 
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -160,7 +154,6 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
-      {/* Messages */}
       <div className="flex-1 w-full flex justify-center scrollbar-thin">
         {messages.length === 0 ? (
           <div className="w-[60%] px-30 flex flex-col items-center justify-center pb-30">
@@ -238,7 +231,6 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
         )}
       </div>
 
-      {/* Input box when messages exist */}
       {messages.length > 0 && (
         <div className="border-t border-border bg-background">
           <div className="max-w-3xl mx-auto p-4">
@@ -268,11 +260,9 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
         </div>
       )}
 
-      {/* Upload Dialog */}
       <AnimatePresence>
         {isDialogOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -281,7 +271,6 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               className="fixed inset-0 bg-black/50 z-40"
             />
 
-            {/* Dialog */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -295,7 +284,6 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               }}
             >
               <div className="bg-card rounded-2xl p-8 w-full max-w-4xl h-[50vh] flex flex-col" style={{ boxShadow: 'var(--shadow-2xl)' }}>
-                {/* Header */}
                 <div className="flex items-start justify-between mb-6">
                   <h2 className="text-2xl font-semibold text-card-foreground">Project files</h2>
                   <div className="flex items-center gap-3">
@@ -324,7 +312,6 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                     className="hidden"
                   />
 
-                  {/* File limit warning */}
                   {documents.length >= 5 && (
                     <div className="bg-muted rounded-xl p-4">
                       <h3 className="text-sm font-semibold text-foreground mb-1">File limit reached</h3>
@@ -334,7 +321,6 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                     </div>
                   )}
 
-                  {/* Documents List */}
                   {documents.length > 0 ? (
                     <div className="grid gap-2">
                       {documents.map((doc, index) => (

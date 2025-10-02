@@ -8,7 +8,6 @@ export default function Home() {
   const [spaces, setSpaces] = useState<string[]>([]);
 
   useEffect(() => {
-    // Load spaces from localStorage
     const savedSpaces = localStorage.getItem('spaces');
     if (savedSpaces) {
       setSpaces(JSON.parse(savedSpaces));

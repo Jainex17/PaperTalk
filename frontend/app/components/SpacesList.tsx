@@ -32,22 +32,18 @@ export function SpacesList({ spaces, onCreateSpace, onSelectSpace }: SpacesListP
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-16 mt-12">
           <h1 className="text-5xl font-normal text-foreground mb-2 font-serif">
             Welcome to <span className="text-foreground">PaperTalk</span>
           </h1>
         </div>
 
-        {/* Spaces Section */}
         <div className="space-y-8">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-normal text-foreground font-serif">My Spaces</h2>
           </div>
 
-          {/* Grid Layout */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {/* Create New Card - Always First */}
             <button
               onClick={handleCreateNewSpace}
               className="bg-card rounded-2xl p-6 border border-border hover:border-primary transition-all duration-200 flex flex-col items-center justify-center h-48 group"
@@ -61,7 +57,6 @@ export function SpacesList({ spaces, onCreateSpace, onSelectSpace }: SpacesListP
               <span className="text-card-foreground font-medium font-sans">Create New Space</span>
             </button>
 
-            {/* Existing Spaces */}
             {spaces.map((space, index) => (
               <button
                 key={space}
