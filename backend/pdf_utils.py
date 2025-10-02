@@ -1,5 +1,6 @@
 from PyPDF2 import PdfReader
 import os
+import tiktoken
 
 def extract_text(file_path: str):
     ext = os.path.splitext(file_path)[1].lower()
@@ -21,15 +22,14 @@ def extract_text(file_path: str):
     else:
         raise ValueError("Unsupported file type. Only .pdf and .txt are allowed.")
 
-def chunk_text(text: str, chunk_size=500, overlap=50):
-    words = text.split()
+def chunk_text(text: str, chunk_tokens=400, overlap=50):
+    encoder = tiktoken.get_encoding("cl100k_base")
+    tokens = encoder.encode(text)
     chunks = []
     
-    for i in range(0, len(words), chunk_size - overlap):
-        end_idx = min(i + chunk_size, len(words))
-        chunks.append(" ".join(words[i:end_idx]))
-        
-        if end_idx >= len(words):
-            break
+    for i in range(0, len(tokens), chunk_tokens - overlap):
+        chunk_tokens_slice = tokens[i:i + chunk_tokens]
+        chunk_text = encoder.decode(chunk_tokens_slice)
+        chunks.append(chunk_text)
     
     return chunks

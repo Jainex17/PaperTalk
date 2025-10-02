@@ -1,27 +1,10 @@
 from sentence_transformers import SentenceTransformer
-from sqlalchemy import create_engine, Column, String, Integer, Text, text, func, cast
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import func, cast
 from pgvector.sqlalchemy import Vector
 import uuid
 
-from config.config import settings
+from db_utils import SessionLocal, Document
 
-DATABASE_URL = settings.DATABASE_URL
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
-Base = declarative_base()
-
-class Document(Base):
-    __tablename__ = "documents"
-    id = Column(Integer, primary_key=True)
-    doc_id = Column(String, nullable=False)
-    original_file_id = Column(String, nullable=False)
-    chunk_index = Column(Integer, nullable=False)
-    space = Column(String, nullable=False)
-    text = Column(Text, nullable=False)
-    embedding = Column(Vector(768), nullable=False)
-
-Base.metadata.create_all(engine)
 embed_model = SentenceTransformer("all-mpnet-base-v2")
 
 def add_document(chunks, space="default", filename=None):

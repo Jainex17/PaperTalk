@@ -3,10 +3,12 @@ from google import genai
 from pydantic import BaseModel
 import os
 from fastapi.middleware.cors import CORSMiddleware
+import tiktoken
 
 from config.config import settings
 from pdf_utils import extract_text, chunk_text
 from vector_store import add_document, query_documents
+from db_utils import get_all_spaces
 
 app = FastAPI(title="PaperTalk")
 
@@ -31,6 +33,7 @@ class AskBody(BaseModel):
 @app.post("/ask")
 def ask(body: AskBody):
     try:
+        encoder = tiktoken.get_encoding("cl100k_base")
         relevant_chunks = query_documents(body.query, top_k=3, space=body.space)
 
         if not relevant_chunks:
@@ -38,26 +41,26 @@ def ask(body: AskBody):
 
         context_parts = []
         sources = []
-        max_context_length = 4000
+        max_context_tokens = 2500
+        current_tokens = 0
 
-        current_length = 0
         for i, chunk in enumerate(relevant_chunks, 1):
             chunk_text = chunk['text']
-            if len(chunk_text) > 1500:
-                chunk_text = chunk_text[:1500] + "..."
-            
             chunk_context = f"[Source {i} - Document: {chunk['doc_id']}]\n{chunk_text}"
-            if current_length + len(chunk_context) > max_context_length:
+            
+            chunk_tokens = len(encoder.encode(chunk_context))  # Count tokens
+            if current_tokens + chunk_tokens > max_context_tokens:
                 break
             
             context_parts.append(chunk_context)
-            current_length += len(chunk_context)
+            current_tokens += chunk_tokens
             sources.append({
                 "doc_id": chunk['doc_id'],
                 "relevance_score": chunk.get('distance', 'N/A')
             })
 
         context = "\n\n---\n\n".join(context_parts)
+
         prompt = f"""Answer the question based on the following context. If the answer isn't in the context, say so. Context: {context} Question: {body.query} Answer:"""
 
         res = client.models.generate_content(
@@ -73,7 +76,12 @@ def ask(body: AskBody):
 
         return {
             "answer": res.text, 
-            "sources": sources
+            "sources": sources,
+            "debug": {
+                "context_tokens": current_tokens,
+                "chunks_used": len(context_parts),
+                "chunks_available": len(relevant_chunks)
+            }
         }
     except Exception as e:
         print(f"Error in /ask endpoint: {str(e)}")
@@ -121,3 +129,9 @@ def search(body: AskBody):
         }
     except Exception as e:
         return {"error": str(e)}, 500
+    
+@app.get("/spaces")
+def get_spaces():
+    spaces = get_all_spaces()
+
+    return spaces
