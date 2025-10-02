@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Send, X, FileText, Loader2, Trash, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Message {
   id: string;
@@ -12,6 +14,8 @@ interface Message {
 interface Document {
   name: string;
   uploadedAt: Date;
+  type: string;
+  isUploading?: boolean;
 }
 
 export function ChatInterface() {
@@ -19,163 +23,247 @@ export function ChatInterface() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const getFileType = (filename: string): string => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    if (ext === 'pdf') return 'PDF';
+    if (ext === 'txt') return 'TXT';
+    return 'Document';
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile && (selectedFile.type === 'application/pdf' || selectedFile.type === 'text/plain')) {
+      // Create document with uploading state
+      const newDoc: Document = {
+        name: selectedFile.name,
+        uploadedAt: new Date(),
+        type: getFileType(selectedFile.name),
+        isUploading: true
+      };
+
+      setDocuments([...documents, newDoc]);
+
+      // Simulate upload delay
+      setTimeout(() => {
+        setDocuments(prev =>
+          prev.map(doc =>
+            doc.name === selectedFile.name
+              ? { ...doc, isUploading: false }
+              : doc
+          )
+        );
+      }, 2000);
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
 
   return (
-    <div className="h-screen flex bg-black text-white">
-      {/* Left Sidebar - Documents List */}
-      <div className="w-64 border-r border-zinc-800 flex flex-col">
-        {/* Sidebar Header */}
-        <div className="border-b border-zinc-800 p-4 flex items-center gap-3">
-        </div>
-
-        {/* Upload Section */}
-        <div className="p-4 border-b border-zinc-800">
-          <input
-            type="file"
-            accept=".pdf,.txt"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="hidden"
-            id="file-upload"
-          />
-          {!file ? (
-            <label
-              htmlFor="file-upload"
-              className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm border border-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-900 transition"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Upload Document
-            </label>
-          ) : (
-            <button
-              disabled={loading}
-              className="w-full px-3 py-2 text-sm bg-white text-black rounded-lg hover:bg-zinc-200 disabled:opacity-50 transition"
-            >
-              {loading ? 'Uploading...' : `Upload ${file.name.slice(0, 12)}...`}
-            </button>
-          )}
-        </div>
-
-        {/* Documents List */}
-        <div className="flex-1 overflow-y-auto p-2">
-          {documents.length === 0 ? (
-            <div className="text-center text-sm text-zinc-600 py-8 px-4">
-              No documents uploaded yet
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {documents.map((doc, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-zinc-900 transition group cursor-pointer"
-                >
-                  {/* Document Icon */}
-                  <div className="mt-0.5 flex-shrink-0">
-                    {doc.name.endsWith('.pdf') ? (
-                      <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM8 18v-1h8v1H8zm0-4v-1h8v1H8zm0-4V9h4v1H8z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5 text-zinc-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zm-2 14v-1h6v1h-6zm0-4v-1h6v1h-6z" />
-                      </svg>
-                    )}
-                  </div>
-
-                  {/* Document Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{doc.name}</p>
-                    <p className="text-xs text-zinc-600 mt-0.5">
-                      {new Date(doc.uploadedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right Side - Chat Interface */}
-      <div className="flex-1 flex flex-col">
-        {/* Chat Header */}
-        <div className="border-b border-zinc-800 p-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-light">Chat</h1>
-            <button className="p-2 hover:bg-zinc-900 rounded transition">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto">
-          {messages.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-zinc-600">
-              <div className="text-center space-y-2">
-                <p>Upload a document and start asking questions</p>
-                <p className="text-sm text-zinc-700">Supports PDF and TXT files</p>
+    <div className="h-screen flex flex-col bg-background text-foreground">
+      {/* Messages */}
+      <div className="flex-1 w-full flex justify-center scrollbar-thin">
+        {messages.length === 0 ? (
+          <div className="w-[60%] px-30 flex flex-col items-center justify-center pb-30">
+            <div className='w-full flex justify-between items-center'>
+              <div className="text-center space-y-4">
+                <h1 className="text-2xl font-semibold font-serif">
+                  PaperTalk
+                </h1>
               </div>
+              <button
+                onClick={() => setIsDialogOpen(true)}
+                className='border border-border bg-secondary text-secondary-foreground py-2 px-4 rounded-full hover:opacity-90 transition-all flex items-center gap-2 cursor-pointer'
+              >
+                {documents.length > 0 && (
+                  <div className="flex -space-x-2">
+                    {Array.from({ length: Math.min(documents.length, 3) }).map((_, i) => {
+                      const colors = ['bg-green-500', 'bg-blue-500', 'bg-gray-500'];
+                      return (
+                        <div key={i} className={`w-6 h-6 ${colors[i]} rounded-md flex items-center justify-center border-2 border-secondary`}>
+                          <FileText className="w-3.5 h-3.5 text-white" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <span>{documents.length > 0 ? `${documents.length} file${documents.length > 1 ? 's' : ''}` : 'Add File'}</span>
+              </button>
             </div>
-          ) : (
-            <div className="p-6 space-y-6">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[70%] rounded-lg px-4 py-3 ${
-                      msg.type === 'user'
-                        ? 'bg-white text-black'
-                        : 'bg-zinc-950 border border-zinc-800'
-                    }`}
+            <div className="pt-10 w-full">
+                <div className="flex gap-3 bg-muted rounded-2xl p-2" style={{ boxShadow: 'var(--shadow-lg)' }}>
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Ask anything about your documents..."
+                    disabled={loading}
+                    className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground"
+                  />
+                  <button
+                    disabled={!input.trim() || loading}
+                    className="px-3 py-3 bg-primary cursor-pointer text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                    {loading ? (
+                      <span className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+            </div>
+
+          </div>
+        ) : (
+          <div className="p-8 space-y-6 max-w-3xl mx-auto w-full">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[75%] rounded-2xl px-5 py-4 ${msg.type === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-card text-card-foreground'
+                    }`}
+                  style={msg.type === 'assistant' ? { boxShadow: 'var(--shadow-md)' } : undefined}
+                >
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{msg.content}</p>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
+
+      {/* Upload Dialog */}
+      <AnimatePresence>
+        {isDialogOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDialogOpen(false)}
+              className="fixed inset-0 bg-black/50 z-40"
+            />
+
+            {/* Dialog */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', duration: 0.3 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-x-hidden"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setIsDialogOpen(false);
+                }
+              }}
+            >
+              <div className="bg-card rounded-2xl p-8 w-full max-w-4xl h-[50vh] flex flex-col" style={{ boxShadow: 'var(--shadow-2xl)' }}>
+                {/* Header */}
+                <div className="flex items-start justify-between mb-6">
+                  <h2 className="text-2xl font-semibold text-card-foreground">Project files</h2>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2 border border-border flex items-center justify-center bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-all text-md font-medium"
+                    >
+                      <Plus className="w-4 h-4 inline-block mr-2" />
+                      <span>Add files</span>
+                    </button>
+                    <button
+                      onClick={() => setIsDialogOpen(false)}
+                      className="p-2 hover:bg-muted rounded-lg transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
 
-        {/* Input */}
-        <div className="border-t border-zinc-800 p-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question..."
-              disabled={loading}
-              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 outline-none focus:border-zinc-700 transition text-sm"
-            />
-            <button
-              disabled={!input.trim() || loading}
-              className="px-6 bg-white text-black rounded-lg hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {loading ? (
-                <span className="inline-block w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
+                <div className="flex-1 overflow-y-auto space-y-4">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.txt"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+
+                  {/* File limit warning */}
+                  {documents.length >= 5 && (
+                    <div className="bg-muted rounded-xl p-4">
+                      <h3 className="text-sm font-semibold text-foreground mb-1">File limit reached</h3>
+                      <p className="text-sm text-muted-foreground">
+                        You can add up to 5 files on the free plan. Upgrade to plus to add 25 files.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Documents List */}
+                  {documents.length > 0 ? (
+                    <div className="grid gap-2">
+                      {documents.map((doc, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, y: -20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="flex items-center gap-4 p-2 hover:bg-muted/50 border border-border/50 shadow rounded-xl transition-colors group"
+                        >
+                          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            {doc.isUploading ? (
+                              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                            ) : (
+                              <FileText className="w-6 h-6 text-primary" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{doc.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {doc.type}
+                            </p>
+                          </div>
+                          {!doc.isUploading && (
+                            <button
+                              onClick={() => setDocuments(documents.filter((_, i) => i !== index))}
+                              className="p-2 hover:bg-destructive/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash className="w-4 h-4 text-destructive" />
+                            </button>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-16">
+                      <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                      <p className="text-sm text-muted-foreground">No files uploaded yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Click "Add files" to upload your documents
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
