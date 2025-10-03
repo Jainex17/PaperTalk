@@ -8,7 +8,7 @@ import tiktoken
 from config.config import settings
 from pdf_utils import extract_text, chunk_text
 from vector_store import upload_document, query_documents
-from db_utils import get_all_spaces, get_documents_by_space
+from db_utils import get_all_spaces, get_documents_by_space, update_space_name
 
 app = FastAPI(title="PaperTalk")
 
@@ -16,7 +16,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.FRONTEND_URL],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
 )
 
@@ -29,6 +29,9 @@ def hello():
 class AskBody(BaseModel):
     space_id: str
     query: str
+
+class RenameSpaceBody(BaseModel):
+    new_name: str
 
 @app.post("/ask")
 def ask(body: AskBody):
@@ -145,3 +148,14 @@ def get_spaces():
 def get_documents(space_id: str):
     documents = get_documents_by_space(space_id)
     return {"documents": documents}
+
+@app.patch("/spaces/{space_id}")
+def rename_space(space_id: str, body: RenameSpaceBody):
+    if not space_id or not body.new_name:
+        return {"error": "Both 'space_id' and 'new_name' are required"}, 400
+
+    success = update_space_name(space_id, body.new_name)
+    if success:
+        return {"message": "Space name updated successfully"}
+    else:
+        return {"error": "Space not found"}, 404

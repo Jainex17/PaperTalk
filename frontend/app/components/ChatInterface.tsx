@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, X, FileText, Loader2, Trash, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSpace } from '@/context/SpaceContext';
 
 interface Source {
   doc_id: string;
@@ -29,6 +30,9 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ spaceid }: ChatInterfaceProps) {
+  
+  const { currentSpace, setCurrentSpace } = useSpace();
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [input, setInput] = useState('');
@@ -37,6 +41,15 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [editSpaceName, setEditSpaceName] = useState(false);
+  const [tempSpaceName, setTempSpaceName] = useState('');
+
+  useEffect(() => {
+    if (currentSpace) {
+      setTempSpaceName(currentSpace.name);
+    }
+  }, [currentSpace]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -176,6 +189,40 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
     }
   };
 
+  const handleSpaceNameSave = async () => {
+    if (tempSpaceName.trim() === '' || !currentSpace) {
+      return;
+    }
+    console.log('Saving space name:', tempSpaceName, "ID:", currentSpace.id);
+    try {
+      const response = await fetch(`http://localhost:8000/spaces/${currentSpace.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          new_name: tempSpaceName,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update space name');
+      }
+
+      await response.json();
+      setCurrentSpace(
+        { ...currentSpace, name: tempSpaceName }
+      );
+      setEditSpaceName(false);
+    } catch (error) {
+      console.error('Error saving space name:', error);
+    }
+  };
+
+  const handleSpaceNameCancel = () => {
+    setTempSpaceName(currentSpace?.name || 'New Space');
+    setEditSpaceName(false);
+  };
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
@@ -183,10 +230,28 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
         {messages.length === 0 ? (
           <div className="w-[60%] px-30 flex flex-col items-center justify-center pb-30">
             <div className='w-full flex justify-between items-center'>
-              <div className="text-center space-y-4">
-                <h1 className="text-2xl font-semibold font-serif">
-                  PaperTalk
+              <div className="text-center space-y-4 pl-2">
+                {editSpaceName ? (<>
+                  <input
+                    type="text"
+                    value={tempSpaceName}
+                    onChange={(e) => setTempSpaceName(e.target.value)}
+                    onBlur={handleSpaceNameSave}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSpaceNameSave();
+                      } else if (e.key === 'Escape') {
+                        handleSpaceNameCancel();
+                      }
+                    }}
+                    autoFocus
+                    className="text-2xl font-semibold font-serif outline-none border-b border-primary bg-transparent"
+                  />
+                </>) :
+                (<h1 className="text-2xl font-semibold font-serif" onClick={() => setEditSpaceName(true)}>
+                  {currentSpace ? currentSpace.name : 'New Space'}
                 </h1>
+                )}
               </div>
               <button
                 onClick={() => setIsDialogOpen(true)}
@@ -234,30 +299,58 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
 
           </div>
         ) : (
-          <div className="p-8 space-y-6 max-w-3xl mx-auto w-full">
+          <div className="w-full">
+            <div className='px-10 pt-6 flex justify-between items-center'>
+              <div className="text-center space-y-4">
+                <h1 className="text-2xl font-semibold font-serif">
+                  {currentSpace ? currentSpace.name : 'New Space'}
+                </h1>
+              </div>
+              <button
+                onClick={() => setIsDialogOpen(true)}
+                className='border border-border bg-secondary text-secondary-foreground py-2 px-4 rounded-xl hover:opacity-90 transition-all flex items-center gap-2 cursor-pointer'
+              >
+                {documents.length > 0 && (
+                  <div className="flex -space-x-2">
+                    {Array.from({ length: Math.min(documents.length, 3) }).map((_, i) => {
+                      const colors = ['bg-green-500', 'bg-blue-500', 'bg-gray-500'];
+                      return (
+                        <div key={i} className={`w-6 h-6 ${colors[i]} rounded-md flex items-center justify-center border-2 border-secondary`}>
+                          <FileText className="w-4 text-white" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <span>{documents.length > 0 ? `${documents.length} file${documents.length > 1 ? 's' : ''}` : 'Add File'}</span>
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6 max-w-3xl mx-auto w-full">
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[75%] rounded-2xl px-5 py-4 ${msg.type === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-card text-card-foreground'
+                  className={`max-w-[75%] rounded-xl px-5 ${msg.type === 'user'
+                      ? 'bg-primary text-primary-foreground py-1'
+                      : 'py-2'
                     }`}
-                  style={msg.type === 'assistant' ? { boxShadow: 'var(--shadow-md)' } : undefined}
                 >
                   <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{msg.content}</p>
                 </div>
               </div>
             ))}
-            <div ref={messagesEndRef} />
+
+              <div ref={messagesEndRef} />
+            </div>
           </div>
         )}
       </div>
 
       {messages.length > 0 && (
-        <div className="border-t border-border bg-background">
+        <div className="bg-background mb-2">
           <div className="max-w-3xl mx-auto p-4">
             <div className="flex gap-3 bg-muted rounded-2xl p-2" style={{ boxShadow: 'var(--shadow-lg)' }}>
               <input

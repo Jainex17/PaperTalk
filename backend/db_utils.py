@@ -46,15 +46,29 @@ def get_all_spaces():
 def get_documents_by_space(space_id: str):
     session = SessionLocal()
     try:
-        result = session.query(Document).filter(Document.space_id == space_id).all()
+        result = session.query(Document.original_file_id).filter(
+            Document.space_id == space_id
+        ).distinct().all()
         
-        unique_documents = set()
-        for row in result:
-            unique_documents.add(row.original_file_id)
-
-        return unique_documents
+        return [row[0] for row in result]
     except Exception as e:
         print("err :( ", e)
         return []
+    finally:
+        session.close()
+
+def update_space_name(space_id: str, new_name: str):
+    session = SessionLocal()
+    try:
+        space = session.query(Spaces).filter(Spaces.id == space_id).first()
+        if space:
+            space.name = new_name
+            session.commit()
+            return True
+        return False
+    except Exception as e:
+        print("err :( ", e)
+        session.rollback()
+        return False
     finally:
         session.close()

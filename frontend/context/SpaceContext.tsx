@@ -5,8 +5,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 export interface Space {
   id: string;
   name: string;
-  description?: string;
-  createdAt?: string;
+  created_at: string;
 }
 
 interface SpaceContextType {
@@ -14,9 +13,7 @@ interface SpaceContextType {
   currentSpace: Space | null;
   setSpaces: (spaces: Space[]) => void;
   setCurrentSpace: (space: Space | null) => void;
-  addSpace: (space: Space) => void;
-  removeSpace: (spaceId: string) => void;
-  updateSpace: (spaceId: string, updates: Partial<Space>) => void;
+  getSpaces: () => void;
 }
 
 const SpaceContext = createContext<SpaceContextType | undefined>(undefined);
@@ -25,23 +22,18 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [currentSpace, setCurrentSpace] = useState<Space | null>(null);
 
-  const addSpace = useCallback((space: Space) => {
-    setSpaces((prev) => [...prev, space]);
-  }, []);
+  function getSpaces() {
+    const res = fetch('http://localhost:8000/spaces', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(data);
+        setSpaces(data);
+      })
+      .catch((error) => {
+        console.error('Error fetching spaces:', error);
+      });
+  }
 
-  const removeSpace = useCallback((spaceId: string) => {
-    setSpaces((prev) => prev.filter((s) => s.id !== spaceId));
-    setCurrentSpace((current) => (current?.id === spaceId ? null : current));
-  }, []);
-
-  const updateSpace = useCallback((spaceId: string, updates: Partial<Space>) => {
-    setSpaces((prev) =>
-      prev.map((s) => (s.id === spaceId ? { ...s, ...updates } : s))
-    );
-    setCurrentSpace((current) =>
-      current?.id === spaceId ? { ...current, ...updates } : current
-    );
-  }, []);
 
   return (
     <SpaceContext.Provider
@@ -50,9 +42,7 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
         currentSpace,
         setSpaces,
         setCurrentSpace,
-        addSpace,
-        removeSpace,
-        updateSpace,
+        getSpaces
       }}
     >
       {children}

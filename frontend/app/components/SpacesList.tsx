@@ -1,13 +1,8 @@
 'use client';
 
+import { useSpace } from '@/context/SpaceContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
-interface Space {
-  id: string;
-  name: string;
-  created_at: string;
-}
 
 const cardColors = [
   'bg-gradient-to-br from-red-200/40 to-red-300/30',
@@ -21,31 +16,26 @@ const cardColors = [
 ];
 
 export function SpacesList() {
-  const [spaces, setSpaces] = useState<Space[]>([]);
-  const router = useRouter();
 
+  const { spaces, getSpaces, setCurrentSpace } = useSpace();
+
+  const router = useRouter();
   const handleCreateNewSpace = () => {
     const uuid = crypto.randomUUID();
     router.push('/space/' + uuid);
   };
-
-  function getSpaces()  {
-    const res = fetch('http://localhost:8000/spaces', { cache: 'no-store' })
-      .then((response) => response.json())
-      .then((data) => {
-          console.log(data);
-        setSpaces(data);
-      })
-      .catch((error) => {
-        console.error('Error fetching spaces:', error);
-      });
+  const handleNavigateToSpace = (space: any) => {
+    setCurrentSpace({
+      id: space.id,
+      name: space.name,
+      created_at: space.created_at
+    });
+    router.push('/space/' + space.id);
   }
 
   useEffect(() => {
     getSpaces();
   }, []);
-
-
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -78,7 +68,7 @@ export function SpacesList() {
             {spaces && spaces.map((space, idx) => (
               <button
                 key={idx}
-                onClick={() => router.push('/space/' + space.id)}
+                onClick={() => handleNavigateToSpace(space)}
                 className={`${
                   cardColors[Math.floor(Math.random() * cardColors.length-1)]
                 } rounded-2xl p-6 cursor-pointer border border-border hover:border-primary transition-all duration-200 text-left flex flex-col justify-between h-48 group relative overflow-hidden`}
