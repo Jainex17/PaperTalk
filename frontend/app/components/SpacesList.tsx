@@ -3,6 +3,8 @@
 import { useSpace } from '@/context/SpaceContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import logo from '@/assets/logo.png';
 
 const cardColors = [
   'bg-gradient-to-br from-amber-100/50 to-amber-200/40',
@@ -41,9 +43,12 @@ export function SpacesList() {
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-left mb-12 mt-12">
-          <h1 className="text-5xl font-normal text-foreground mb-2 font-serif">
-            Welcome to <span className="text-foreground">PaperTalk</span>
-          </h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-5xl flex items-center gap-4 font-normal text-foreground font-serif">
+              Welcome to <span className="text-foreground">PaperTalk</span>
+              <Image src={logo} alt="PaperTalk" width={48} height={48} className="object-contain pb-2" />
+            </h1>
+          </div>
           <p className="text-lg text-muted-foreground max-w-2xl font-sans">
             Your AI-powered assistant for reading and understanding documents. Create a new space to get started!
           </p>

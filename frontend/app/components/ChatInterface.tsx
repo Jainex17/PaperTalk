@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, X, FileText, Loader2, Trash, Plus } from 'lucide-react';
+import { Send, X, FileText, Loader2, Trash, Plus, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSpace } from '@/context/SpaceContext';
 
@@ -41,6 +41,8 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef2 = useRef<HTMLTextAreaElement>(null);
 
   const [editSpaceName, setEditSpaceName] = useState(false);
   const [tempSpaceName, setTempSpaceName] = useState('');
@@ -54,6 +56,17 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    const adjustHeight = (textarea: HTMLTextAreaElement | null) => {
+      if (textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+      }
+    };
+    adjustHeight(textareaRef.current);
+    adjustHeight(textareaRef2.current);
+  }, [input]);
 
   const getDocuments = async () => {
     setLoadingDocuments(true);
@@ -226,32 +239,37 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
-      <div className="flex-1 w-full flex justify-center scrollbar-thin">
+      <div className="flex-1 w-full flex justify-center overflow-hidden">
         {messages.length === 0 ? (
-          <div className="w-[60%] px-30 flex flex-col items-center justify-center pb-30">
-            <div className='w-full flex justify-between items-center'>
-              <div className="text-center space-y-4 pl-2">
-                {editSpaceName ? (<>
-                  <input
-                    type="text"
-                    value={tempSpaceName}
-                    onChange={(e) => setTempSpaceName(e.target.value)}
-                    onBlur={handleSpaceNameSave}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSpaceNameSave();
-                      } else if (e.key === 'Escape') {
-                        handleSpaceNameCancel();
-                      }
-                    }}
-                    autoFocus
-                    className="text-2xl font-semibold font-serif outline-none border-b border-primary bg-transparent"
-                  />
-                </>) :
-                  (<h1 className="text-2xl font-semibold font-serif" onClick={() => setEditSpaceName(true)}>
-                    {currentSpace ? currentSpace.name : 'New Space'}
-                  </h1>
-                  )}
+          <div className="w-[60%] px-30 flex flex-col items-center justify-center">
+            <div className='w-full flex justify-between items-center mb-6'>
+              <div className="flex items-center gap-3">
+                <a href="/" className="p-2 hover:bg-muted rounded-lg transition-colors">
+                  <ArrowLeft className="w-5 h-5" />
+                </a>
+                <div className="text-center">
+                  {editSpaceName ? (<>
+                    <input
+                      type="text"
+                      value={tempSpaceName}
+                      onChange={(e) => setTempSpaceName(e.target.value)}
+                      onBlur={handleSpaceNameSave}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSpaceNameSave();
+                        } else if (e.key === 'Escape') {
+                          handleSpaceNameCancel();
+                        }
+                      }}
+                      autoFocus
+                      className="text-2xl font-semibold font-serif outline-none border-b border-primary bg-transparent"
+                    />
+                  </>) :
+                    (<h1 className="text-2xl font-semibold font-serif" onClick={() => setEditSpaceName(true)}>
+                      {currentSpace ? currentSpace.name : 'New Space'}
+                    </h1>
+                    )}
+                </div>
               </div>
               <button
                 onClick={() => setIsDialogOpen(true)}
@@ -272,21 +290,27 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                 <span>{documents.length > 0 ? `${documents.length} file${documents.length > 1 ? 's' : ''}` : 'Add File'}</span>
               </button>
             </div>
-            <div className="pt-10 w-full">
-              <div className="flex gap-3 bg-muted rounded-2xl p-2" style={{ boxShadow: 'var(--shadow-lg)' }}>
-                <input
-                  type="text"
+            <div className="w-full">
+              <div className="flex gap-3 bg-card rounded-2xl p-2 items-end" style={{ boxShadow: 'var(--shadow-lg)' }}>
+                <textarea
+                  ref={textareaRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
                   placeholder="Ask anything about your documents..."
                   disabled={loading}
-                  className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground"
+                  rows={3}
+                  className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground resize-none overflow-hidden"
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!input.trim() || loading}
-                  className="px-3 py-3 bg-primary cursor-pointer text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="px-3 py-3 bg-primary cursor-pointer text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0 flex items-center justify-center"
                 >
                   {loading ? (
                     <span className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -301,10 +325,15 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
         ) : (
           <div className="w-full">
             <div className='px-10 pt-6 flex justify-between items-center'>
-              <div className="text-center space-y-4">
-                <h1 className="text-2xl font-semibold font-serif">
-                  {currentSpace ? currentSpace.name : 'New Space'}
-                </h1>
+              <div className="flex items-center gap-3">
+                <a href="/" className="p-2 hover:bg-muted rounded-lg transition-colors">
+                  <ArrowLeft className="w-5 h-5" />
+                </a>
+                <div className="text-center space-y-4">
+                  <h1 className="text-2xl font-semibold font-serif">
+                    {currentSpace ? currentSpace.name : 'New Space'}
+                  </h1>
+                </div>
               </div>
               <button
                 onClick={() => setIsDialogOpen(true)}
@@ -326,15 +355,15 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               </button>
             </div>
 
-            <div className="p-8 space-y-6 max-w-3xl mx-auto w-full">
+            <div className="p-8 pb-52 space-y-6 max-w-3xl mx-auto w-full flex flex-col overflow-y-auto h-[95vh] scrollbar-hidden">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[95%] rounded-xl px-5 ${msg.type === 'user'
-                      ? 'bg-primary text-primary-foreground py-2'
+                    className={`max-w-[89%] rounded-xl ${msg.type === 'user'
+                      ? 'bg-primary text-primary-foreground py-2 px-5'
                       : 'py-2'
                       }`}
                   >
@@ -344,21 +373,17 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               ))}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="max-w-[95%] rounded-xl px-5 py-2">
-                    <div className="text-sm leading-relaxed font-sans text-muted-foreground italic">
-                      <svg className="w-12 h-4" viewBox="0 0 60 16" xmlns="http://www.w3.org/2000/svg">
-                        <circle fill="currentColor" cx="6" cy="8" r="3">
+                  <svg className="w-16 h-9" viewBox="0 0 60 16">
+                        <circle fill="currentColor" cx="6" cy="8" r="4">
                           <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.1" />
                         </circle>
-                        <circle fill="currentColor" cx="26" cy="8" r="3">
+                        <circle fill="currentColor" cx="26" cy="8" r="4">
                           <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.2" />
                         </circle>
-                        <circle fill="currentColor" cx="46" cy="8" r="3">
+                        <circle fill="currentColor" cx="46" cy="8" r="4">
                           <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.3" />
                         </circle>
                       </svg>
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -367,24 +392,29 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
           </div>
         )}
       </div>
-
       {messages.length > 0 && (
-        <div className="bg-background mb-2">
+        <div className="mb-2 absolute bottom-0 left-0 right-0 z-20">
           <div className="max-w-3xl mx-auto p-4">
-            <div className="flex gap-3 bg-muted rounded-2xl p-2" style={{ boxShadow: 'var(--shadow-lg)' }}>
-              <input
-                type="text"
+            <div className="flex gap-3 bg-card rounded-2xl p-2 items-end" style={{ boxShadow: 'var(--shadow-lg)' }}>
+              <textarea
+                ref={textareaRef2}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
                 placeholder="Ask a follow-up question..."
                 disabled={loading}
-                className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground"
+                rows={3}
+                className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground resize-none overflow-hidden"
               />
               <button
                 onClick={handleSendMessage}
                 disabled={!input.trim() || loading}
-                className="px-3 py-3 bg-primary cursor-pointer text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="px-3 py-3 bg-primary cursor-pointer text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0 flex items-center justify-center"
               >
                 {loading ? (
                   <span className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -396,6 +426,7 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
           </div>
         </div>
       )}
+      <div className='w-full h-40 z-0 fixed bottom-0 bg-gradient-to-t from-background/90 via-background/40 via-30% to-transparent shadow-[0_-8px_32px_rgba(0,0,0,0.12)]' style={{ backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', maskImage: 'linear-gradient(to top, black 20%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to top, black 20%, transparent 100%)' }} />
 
       <AnimatePresence>
         {isDialogOpen && (
@@ -426,7 +457,7 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 border border-border flex items-center justify-center bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-all text-md font-medium"
+                      className="px-4 py-2 border border-border flex items-center cursor-pointer justify-center bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-all text-md font-medium"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       <span>Add files</span>

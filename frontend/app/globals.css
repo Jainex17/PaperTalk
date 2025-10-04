@@ -17,6 +17,15 @@
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: #4a4a4a;
   }
+
+  .scrollbar-hidden {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none !important;
+  }
 }
 
 :root {
