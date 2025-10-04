@@ -22,7 +22,7 @@ def extract_text(file_path: str):
     else:
         raise ValueError("Unsupported file type. Only .pdf and .txt are allowed.")
 
-def chunk_text(text: str, chunk_tokens=400, overlap=50):
+def chunk_text(text: str, chunk_tokens=500, overlap=100):
     encoder = tiktoken.get_encoding("cl100k_base")
     tokens = encoder.encode(text)
     chunks = []

@@ -47,6 +47,8 @@ def query_documents(query, top_k=3, space_id="default"):
         session.query(
             Document.doc_id,
             Document.text,
+            Document.chunk_index,
+            Document.original_file_id.label("filename"),
             func.l2_distance(Document.embedding, cast(query_embedding, Vector(768))).label("distance")
         )
         .filter(Document.space_id == space_id)
@@ -56,3 +58,60 @@ def query_documents(query, top_k=3, space_id="default"):
 )
     session.close()
     return [{"doc_id": r[0], "text": r[1], "distance": r[2]} for r in result]
+
+def query_documents_hybrid(query, top_k=10, space_id="default"):
+    query_embedding = embed_model.encode([query])[0].tolist()
+    session = SessionLocal()
+
+    semantic_results = (
+        session.query(
+            Document.doc_id,
+            Document.text,
+            Document.chunk_index,
+            Document.original_file_id.label("filename"),
+            func.l2_distance(Document.embedding, cast(query_embedding, Vector(768))).label("distance"),
+        )
+        .filter(Document.space_id == space_id)
+        .order_by("distance")
+        .limit(top_k * 2)
+        .all()
+    )
+
+    query_terms = query.lower().split()
+    boosted_results = []
+
+    for r in semantic_results:
+        doc_id, text, chunk_idx, filename, distance = r
+        text_lower = text.lower()
+
+        keyword_matches = sum(1 for term in query_terms if term in text_lower)
+        boosted_distance = distance - (keyword_matches * 0.1)
+        boosted_results.append({
+              "doc_id": doc_id,
+              "text": text,
+              "distance": boosted_distance,
+              "filename": filename
+          })
+        
+    boosted_results.sort(key=lambda x: x["distance"])
+
+    session.close()
+    return boosted_results[:top_k]
+
+def expand_query(query: str) -> str:
+    expansions = {
+        "best practices": ["best practices", "recommended methods", "standard procedures"],
+        "challenges": ["challenges", "difficulties", "obstacles"],
+        "benefits": ["benefits", "advantages", "positive aspects"],
+        "authors": ["authors", "writers", "creators", "contributors"],
+        "summary": ["summary", "overview", "abstract", "key points"]
+    }
+
+    expanded_terms = [query]
+    query_lower = query.lower()
+
+    for key, synonyms in expansions.items():
+        if key in query_lower:
+            expanded_terms.extend(synonyms)
+
+    return " ".join(expanded_terms)

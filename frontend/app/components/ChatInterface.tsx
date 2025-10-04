@@ -30,9 +30,9 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ spaceid }: ChatInterfaceProps) {
-  
+
   const { currentSpace, setCurrentSpace } = useSpace();
-  
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [input, setInput] = useState('');
@@ -248,10 +248,10 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                     className="text-2xl font-semibold font-serif outline-none border-b border-primary bg-transparent"
                   />
                 </>) :
-                (<h1 className="text-2xl font-semibold font-serif" onClick={() => setEditSpaceName(true)}>
-                  {currentSpace ? currentSpace.name : 'New Space'}
-                </h1>
-                )}
+                  (<h1 className="text-2xl font-semibold font-serif" onClick={() => setEditSpaceName(true)}>
+                    {currentSpace ? currentSpace.name : 'New Space'}
+                  </h1>
+                  )}
               </div>
               <button
                 onClick={() => setIsDialogOpen(true)}
@@ -273,28 +273,28 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               </button>
             </div>
             <div className="pt-10 w-full">
-                <div className="flex gap-3 bg-muted rounded-2xl p-2" style={{ boxShadow: 'var(--shadow-lg)' }}>
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Ask anything about your documents..."
-                    disabled={loading}
-                    className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground"
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!input.trim() || loading}
-                    className="px-3 py-3 bg-primary cursor-pointer text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {loading ? (
-                      <span className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
+              <div className="flex gap-3 bg-muted rounded-2xl p-2" style={{ boxShadow: 'var(--shadow-lg)' }}>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ask anything about your documents..."
+                  disabled={loading}
+                  className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!input.trim() || loading}
+                  className="px-3 py-3 bg-primary cursor-pointer text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {loading ? (
+                    <span className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
           </div>
@@ -327,21 +327,40 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
             </div>
 
             <div className="p-8 space-y-6 max-w-3xl mx-auto w-full">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+              {messages.map((msg) => (
                 <div
-                  className={`max-w-[75%] rounded-xl px-5 ${msg.type === 'user'
-                      ? 'bg-primary text-primary-foreground py-1'
-                      : 'py-2'
-                    }`}
+                  key={msg.id}
+                  className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{msg.content}</p>
+                  <div
+                    className={`max-w-[95%] rounded-xl px-5 ${msg.type === 'user'
+                      ? 'bg-primary text-primary-foreground py-2'
+                      : 'py-2'
+                      }`}
+                  >
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{msg.content}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="max-w-[95%] rounded-xl px-5 py-2">
+                    <div className="text-sm leading-relaxed font-sans text-muted-foreground italic">
+                      <svg className="w-12 h-4" viewBox="0 0 60 16" xmlns="http://www.w3.org/2000/svg">
+                        <circle fill="currentColor" cx="6" cy="8" r="3">
+                          <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.1" />
+                        </circle>
+                        <circle fill="currentColor" cx="26" cy="8" r="3">
+                          <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.2" />
+                        </circle>
+                        <circle fill="currentColor" cx="46" cy="8" r="3">
+                          <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.3" />
+                        </circle>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div ref={messagesEndRef} />
             </div>

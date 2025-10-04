@@ -7,7 +7,7 @@ import tiktoken
 
 from config.config import settings
 from pdf_utils import extract_text, chunk_text
-from vector_store import upload_document, query_documents
+from vector_store import query_documents_hybrid, upload_document, query_documents, expand_query
 from db_utils import get_all_spaces, get_documents_by_space, update_space_name
 
 app = FastAPI(title="PaperTalk")
@@ -40,10 +40,16 @@ def ask(body: AskBody):
 
     try:
         encoder = tiktoken.get_encoding("cl100k_base")
-        relevant_chunks = query_documents(body.query, top_k=3, space_id=body.space_id)
+        expanded_query = expand_query(body.query)
+        relevant_chunks = query_documents_hybrid(expanded_query, top_k=10, space_id=body.space_id)
 
         if not relevant_chunks:
             return {"answer": "No relevant information found.", "sources": []}
+
+        if relevant_chunks:
+            distance_threshold = 1.0
+            relevant_chunks = [chunk for chunk in relevant_chunks if chunk.get('distance', 999) < distance_threshold]
+            relevant_chunks = relevant_chunks[:5]
 
         context_parts = []
         sources = []
@@ -54,7 +60,7 @@ def ask(body: AskBody):
             chunk_text = chunk['text']
             chunk_context = f"[Source {i} - Document: {chunk['doc_id']}]\n{chunk_text}"
             
-            chunk_tokens = len(encoder.encode(chunk_context))  # Count tokens
+            chunk_tokens = len(encoder.encode(chunk_context))
             if current_tokens + chunk_tokens > max_context_tokens:
                 break
             
@@ -62,19 +68,38 @@ def ask(body: AskBody):
             current_tokens += chunk_tokens
             sources.append({
                 "doc_id": chunk['doc_id'],
+                "filename": chunk.get('filename', 'N/A'),
+                "chunk_text": chunk['text'],
                 "relevance_score": chunk.get('distance', 'N/A')
             })
 
         context = "\n\n---\n\n".join(context_parts)
         print(context)
-        prompt = f"""Answer the question based on the following context. If the answer isn't in the context, say so. Context: {context} Question: {body.query} Answer:"""
+        prompt = f"""You are a helpful AI assistant. Analyze the following context carefully and 
+  answer the question.
+
+  INSTRUCTIONS:
+  - Synthesize information from multiple sources if needed
+  - Extract key insights and best practices mentioned in the context
+  - If the answer requires combining information from different parts, do so intelligently
+  - Only say "cannot be answered" if the context is completely irrelevant
+  - Be specific and cite which sources support your answer
+
+  CONTEXT:
+  {context}
+
+  QUESTION: {body.query}
+
+  ANSWER:"""
 
         res = client.models.generate_content(
             model="gemini-2.0-flash", 
             contents=prompt,
             config={
-                "temperature": 0.2,
+                "temperature": 0.4,
                 "max_output_tokens": 1024,
+                "top_p": 0.9,
+                "top_k": 40
             }
         )
         if not res or not res.text:

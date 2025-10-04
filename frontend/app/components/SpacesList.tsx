@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const cardColors = [
-  'bg-gradient-to-br from-red-200/40 to-red-300/30',
-  'bg-gradient-to-br from-yellow-200/40 to-yellow-300/30',
-  'bg-gradient-to-br from-orange-200/40 to-orange-300/30',
-  'bg-gradient-to-br from-pink-200/40 to-pink-300/30',
-  'bg-gradient-to-br from-purple-200/40 to-purple-300/30',
-  'bg-gradient-to-br from-blue-200/40 to-blue-300/30',
-  'bg-gradient-to-br from-green-200/40 to-green-300/30',
-  'bg-gradient-to-br from-amber-200/40 to-amber-300/30',
+  'bg-gradient-to-br from-amber-100/50 to-amber-200/40',
+  'bg-gradient-to-br from-orange-100/50 to-orange-200/40',
+  'bg-gradient-to-br from-yellow-100/50 to-yellow-200/40',
+  'bg-gradient-to-br from-stone-100/50 to-stone-200/40',
+  'bg-gradient-to-br from-neutral-100/50 to-neutral-200/40',
+  'bg-gradient-to-br from-zinc-100/50 to-zinc-200/40',
+  'bg-gradient-to-br from-slate-100/50 to-slate-200/40',
+  'bg-gradient-to-br from-gray-100/50 to-gray-200/40',
 ];
 
 export function SpacesList() {
@@ -40,15 +40,18 @@ export function SpacesList() {
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16 mt-12">
+        <div className="text-left mb-12 mt-12">
           <h1 className="text-5xl font-normal text-foreground mb-2 font-serif">
             Welcome to <span className="text-foreground">PaperTalk</span>
           </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl font-sans">
+            Your AI-powered assistant for reading and understanding documents. Create a new space to get started!
+          </p>
         </div>
 
         <div className="space-y-8">
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-2xl font-normal text-foreground font-serif">My Spaces</h2>
+            <h2 className="text-3xl font-normal text-foreground font-serif">My Spaces</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
