@@ -13,7 +13,7 @@ interface SpaceContextType {
   currentSpace: Space | null;
   setSpaces: (spaces: Space[]) => void;
   setCurrentSpace: (space: Space | null) => void;
-  getSpaces: () => void;
+  getSpaces: () => Promise<void>;
 }
 
 const SpaceContext = createContext<SpaceContextType | undefined>(undefined);
@@ -22,16 +22,14 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [currentSpace, setCurrentSpace] = useState<Space | null>(null);
 
-  function getSpaces() {
-    const res = fetch('http://localhost:8000/spaces', { cache: 'no-store' })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
-        setSpaces(data);
-      })
-      .catch((error) => {
-        console.error('Error fetching spaces:', error);
-      });
+  async function getSpaces() {
+    try {
+      const res = await fetch('http://localhost:8000/spaces', { cache: 'no-store' });
+      const data = await res.json();
+      setSpaces(data);
+    } catch (error) {
+      console.error('Error fetching spaces:', error);
+    }
   }
 
 

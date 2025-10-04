@@ -8,6 +8,8 @@ import { useSpace } from '@/context/SpaceContext';
 interface Source {
   doc_id: string;
   relevance_score: number | string;
+  chunk_text: string;
+  filename: string;
 }
 
 interface Message {
@@ -237,11 +239,50 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
     setEditSpaceName(false);
   };
 
+  const renderMessageWithCitations = (content: string, sources?: Source[]) => {
+    if (!sources || sources.length === 0) {
+      return <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{content}</p>;
+    }
+
+    const citationMap = new Map<string, number>();
+    sources.forEach((source, index) => {
+      citationMap.set(source.doc_id, index + 1);
+    });
+
+    const parts = content.split(/(\(doc_[^)]+\))/g);
+
+    return (
+      <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">
+        {parts.map((part, index) => {
+          const match = part.match(/\(doc_([^)]+)\)/);
+          if (match) {
+            const docId = `doc_${match[1]}`;
+            const citationNumber = citationMap.get(docId);
+            const source = sources.find(s => s.doc_id === docId);
+
+            if (citationNumber && source) {
+              return (
+                <span key={index} className="group relative inline-block">
+                  <sup className="text-primary cursor-help font-medium">[{citationNumber}]</sup>
+                  <span className="invisible group-hover:visible absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-80 max-w-[90vw] bg-popover text-popover-foreground text-xs rounded-lg p-3 shadow-lg border border-border z-50 pointer-events-auto">
+                    <div className="font-semibold mb-1">{source.filename}</div>
+                    <div className="text-muted-foreground line-clamp-6">{source.chunk_text}</div>
+                  </span>
+                </span>
+              );
+            }
+          }
+          return part;
+        })}
+      </p>
+    );
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
       <div className="flex-1 w-full flex justify-center overflow-hidden">
         {messages.length === 0 ? (
-          <div className="w-[60%] px-30 flex flex-col items-center justify-center">
+          <div className="w-[80%] xl:w-[60%] px-30 flex flex-col items-center justify-center">
             <div className='w-full flex justify-between items-center mb-6'>
               <div className="flex items-center gap-3">
                 <a href="/" className="p-2 hover:bg-muted rounded-lg transition-colors">
@@ -262,10 +303,10 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                         }
                       }}
                       autoFocus
-                      className="text-2xl font-semibold font-serif outline-none border-b border-primary bg-transparent"
+                      className="text-xl font-semibold font-serif outline-none border-b border-primary bg-transparent"
                     />
                   </>) :
-                    (<h1 className="text-2xl font-semibold font-serif" onClick={() => setEditSpaceName(true)}>
+                    (<h1 className="text-xl font-semibold font-serif" onClick={() => setEditSpaceName(true)}>
                       {currentSpace ? currentSpace.name : 'New Space'}
                     </h1>
                     )}
@@ -273,24 +314,12 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               </div>
               <button
                 onClick={() => setIsDialogOpen(true)}
-                className='border border-border bg-secondary text-secondary-foreground py-2 px-4 rounded-full hover:opacity-90 transition-all flex items-center gap-2 cursor-pointer'
+                className='border border-border bg-secondary text-secondary-foreground py-2 px-5 rounded-xl hover:opacity-90 transition-all gap-2 cursor-pointer'
               >
-                {documents.length > 0 && (
-                  <div className="flex -space-x-2">
-                    {Array.from({ length: Math.min(documents.length, 3) }).map((_, i) => {
-                      const colors = ['bg-green-500', 'bg-blue-500', 'bg-gray-500'];
-                      return (
-                        <div key={i} className={`w-6 h-6 ${colors[i]} rounded-md flex items-center justify-center border-2 border-secondary`}>
-                          <FileText className="w-4 text-white" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
                 <span>{documents.length > 0 ? `${documents.length} file${documents.length > 1 ? 's' : ''}` : 'Add File'}</span>
               </button>
             </div>
-            <div className="w-full">
+            <div className="w-full space-y-8">
               <div className="flex gap-3 bg-card rounded-2xl p-2 items-end" style={{ boxShadow: 'var(--shadow-lg)' }}>
                 <textarea
                   ref={textareaRef}
@@ -319,6 +348,33 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                   )}
                 </button>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setInput('Summarize all documents')}
+                  className="text-left px-4 py-3 bg-muted/50 hover:bg-accent hover:border-primary/20 border border-transparent rounded-xl transition-all duration-200 text-sm text-foreground hover:-translate-y-0.5"
+                >
+                  Summarize all documents
+                </button>
+                <button
+                  onClick={() => setInput('What are the key findings?')}
+                  className="text-left px-4 py-3 bg-muted/50 hover:bg-accent hover:border-primary/20 border border-transparent rounded-xl transition-all duration-200 text-sm text-foreground hover:-translate-y-0.5"
+                >
+                  What are the key findings?
+                </button>
+                <button
+                  onClick={() => setInput('Compare the main topics discussed')}
+                  className="text-left px-4 py-3 bg-muted/50 hover:bg-accent hover:border-primary/20 border border-transparent rounded-xl transition-all duration-200 text-sm text-foreground hover:-translate-y-0.5"
+                >
+                  Compare the main topics discussed
+                </button>
+                <button
+                  onClick={() => setInput('List the main conclusions')}
+                  className="text-left px-4 py-3 bg-muted/50 hover:bg-accent hover:border-primary/20 border border-transparent rounded-xl transition-all duration-200 text-sm text-foreground hover:-translate-y-0.5"
+                >
+                  List the main conclusions
+                </button>
+              </div>
             </div>
 
           </div>
@@ -330,27 +386,15 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                   <ArrowLeft className="w-5 h-5" />
                 </a>
                 <div className="text-center space-y-4">
-                  <h1 className="text-2xl font-semibold font-serif">
+                  <h1 className="text-xl font-semibold font-serif">
                     {currentSpace ? currentSpace.name : 'New Space'}
                   </h1>
                 </div>
               </div>
               <button
                 onClick={() => setIsDialogOpen(true)}
-                className='border border-border bg-secondary text-secondary-foreground py-2 px-4 rounded-xl hover:opacity-90 transition-all flex items-center gap-2 cursor-pointer'
+                className='border border-border bg-secondary text-secondary-foreground py-2 px-5 rounded-xl hover:opacity-90 transition-all cursor-pointer'
               >
-                {documents.length > 0 && (
-                  <div className="flex -space-x-2">
-                    {Array.from({ length: Math.min(documents.length, 3) }).map((_, i) => {
-                      const colors = ['bg-green-500', 'bg-blue-500', 'bg-gray-500'];
-                      return (
-                        <div key={i} className={`w-6 h-6 ${colors[i]} rounded-md flex items-center justify-center border-2 border-secondary`}>
-                          <FileText className="w-4 text-white" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
                 <span>{documents.length > 0 ? `${documents.length} file${documents.length > 1 ? 's' : ''}` : 'Add File'}</span>
               </button>
             </div>
@@ -367,23 +411,27 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                       : 'py-2'
                       }`}
                   >
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{msg.content}</p>
+                    {msg.type === 'user' ? (
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{msg.content}</p>
+                    ) : (
+                      renderMessageWithCitations(msg.content, msg.sources)
+                    )}
                   </div>
                 </div>
               ))}
               {loading && (
                 <div className="flex justify-start">
                   <svg className="w-16 h-9" viewBox="0 0 60 16">
-                        <circle fill="currentColor" cx="6" cy="8" r="4">
-                          <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.1" />
-                        </circle>
-                        <circle fill="currentColor" cx="26" cy="8" r="4">
-                          <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.2" />
-                        </circle>
-                        <circle fill="currentColor" cx="46" cy="8" r="4">
-                          <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.3" />
-                        </circle>
-                      </svg>
+                    <circle fill="currentColor" cx="6" cy="8" r="4">
+                      <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.1" />
+                    </circle>
+                    <circle fill="currentColor" cx="26" cy="8" r="4">
+                      <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.2" />
+                    </circle>
+                    <circle fill="currentColor" cx="46" cy="8" r="4">
+                      <animate attributeName="opacity" dur="1s" values="0;1;0" repeatCount="indefinite" begin="0.3" />
+                    </circle>
+                  </svg>
                 </div>
               )}
 
@@ -459,12 +507,11 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                       onClick={() => fileInputRef.current?.click()}
                       className="px-4 py-2 border border-border flex items-center cursor-pointer justify-center bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-all text-md font-medium"
                     >
-                      <Plus className="w-4 h-4 mr-2" />
                       <span>Add files</span>
                     </button>
                     <button
                       onClick={() => setIsDialogOpen(false)}
-                      className="p-2 hover:bg-muted rounded-lg transition-colors"
+                      className="px-2 py-2 border border-border flex items-center cursor-pointer justify-center bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-all text-md font-medium"
                     >
                       <X className="w-5 h-5" />
                     </button>

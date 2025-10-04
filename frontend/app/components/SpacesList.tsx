@@ -18,7 +18,7 @@ const cardColors = [
 ];
 
 export function SpacesList() {
-
+  const [isLoading, setIsLoading] = useState(true);
   const { spaces, getSpaces, setCurrentSpace } = useSpace();
 
   const router = useRouter();
@@ -36,7 +36,7 @@ export function SpacesList() {
   }
 
   useEffect(() => {
-    getSpaces();
+    getSpaces().finally(() => setIsLoading(false));
   }, []);
 
   return (
@@ -73,24 +73,43 @@ export function SpacesList() {
               <span className="text-card-foreground font-medium font-sans">Create New Space</span>
             </button>
 
-            {spaces && spaces.map((space, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleNavigateToSpace(space)}
-                className={`${
-                  cardColors[Math.floor(Math.random() * cardColors.length-1)]
-                } rounded-2xl p-6 cursor-pointer border border-border hover:border-primary transition-all duration-200 text-left flex flex-col justify-between h-48 group relative overflow-hidden`}
-                style={{ boxShadow: 'var(--shadow-sm)' }}
-              >
-                <div className="flex-1">
-                  <div className="text-3xl mb-3">📄</div>
-                  <h3 className="text-lg font-medium text-foreground line-clamp-2 font-serif">{space.name}</h3>
-                </div>
-                <div className="text-sm text-muted-foreground mt-2 font-sans">
-                  {new Date(space.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                </div>
-              </button>
-            ))}
+            {isLoading ? (
+              <>
+                {[...Array(3)].map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-card rounded-2xl p-6 border border-border h-48 animate-pulse"
+                    style={{ boxShadow: 'var(--shadow-sm)' }}
+                  >
+                    <div className="w-8 h-8 bg-secondary rounded-md mb-3"></div>
+                    <div className="h-4 bg-secondary rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-secondary rounded w-1/2"></div>
+                    <div className="mt-auto pt-8">
+                      <div className="h-3 bg-secondary rounded w-1/3"></div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              spaces && spaces.map((space, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleNavigateToSpace(space)}
+                  className={`${
+                    cardColors[Math.floor(Math.random() * cardColors.length-1)]
+                  } rounded-2xl p-6 cursor-pointer border border-border hover:border-primary transition-all duration-200 text-left flex flex-col justify-between h-48 group relative overflow-hidden`}
+                  style={{ boxShadow: 'var(--shadow-sm)' }}
+                >
+                  <div className="flex-1">
+                    <div className="text-3xl mb-3">📄</div>
+                    <h3 className="text-lg font-medium text-foreground line-clamp-2 font-serif">{space.name}</h3>
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-2 font-sans">
+                    {new Date(space.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </div>
       </div>
