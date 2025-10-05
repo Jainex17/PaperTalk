@@ -33,7 +33,7 @@ export function MessageInput({ value, onChange, onSend, loading, placeholder }: 
         placeholder={placeholder || "Ask anything about your documents..."}
         disabled={loading}
         rows={3}
-        className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground resize-none overflow-hidden"
+        className="flex-1 w-full bg-transparent px-4 py-3 outline-none text-sm placeholder:text-muted-foreground resize-none overflow-hidden transition-all duration-300 ease-in-out"
       />
       <button
         onClick={onSend}

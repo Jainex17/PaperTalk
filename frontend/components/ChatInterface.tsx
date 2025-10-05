@@ -15,6 +15,7 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
+  const [hoveredPrompt, setHoveredPrompt] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const { messages, loading, sendMessage } = useMessages(spaceid);
@@ -29,6 +30,10 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
 
     await sendMessage(input);
     setInput('');
+  };
+
+  const handleHoverPrompt = (prompt: string) => {
+    setHoveredPrompt(prompt);
   };
 
   return (
@@ -48,8 +53,9 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                 onChange={setInput}
                 onSend={handleSendMessage}
                 loading={loading}
+                placeholder={hoveredPrompt ? hoveredPrompt : "Ask a question about your documents..."}
               />
-              <SuggestedPrompts onSelectPrompt={setInput} />
+              <SuggestedPrompts onSelectPrompt={setInput} onHoverPrompt={handleHoverPrompt} />
             </div>
           </div>
         ) : (
@@ -73,7 +79,7 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               onChange={setInput}
               onSend={handleSendMessage}
               loading={loading}
-              placeholder="Ask a follow-up question..."
+              placeholder={hoveredPrompt ? hoveredPrompt : "Ask a question about your documents..."}
             />
           </div>
         </div>
