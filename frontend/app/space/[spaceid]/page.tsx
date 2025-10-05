@@ -1,7 +1,7 @@
-import { ChatInterface } from "@/app/components/ChatInterface";
+import { ChatInterface } from "@/components/ChatInterface";
 
 interface SpacePageProps {
-    spaceid: String
+    spaceid: string
 }
 
 async function SpacePage({ params }: { params: Promise<SpacePageProps> }) {

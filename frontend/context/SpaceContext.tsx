@@ -1,12 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-
-export interface Space {
-  id: string;
-  name: string;
-  created_at: string;
-}
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { Space } from '@/types';
+import { getSpaces as getSpacesAPI } from '@/lib/api/spaces';
 
 interface SpaceContextType {
   spaces: Space[];
@@ -24,14 +20,12 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
 
   async function getSpaces() {
     try {
-      const res = await fetch('http://localhost:8000/spaces', { cache: 'no-store' });
-      const data = await res.json();
+      const data = await getSpacesAPI();
       setSpaces(data);
     } catch (error) {
       console.error('Error fetching spaces:', error);
     }
   }
-
 
   return (
     <SpaceContext.Provider
