@@ -38,27 +38,6 @@ def upload_document(chunks, space_id, filename=None):
     finally:
         session.close()
         
-
-def query_documents(query, top_k=3, space_id="default"):
-    query_embedding = embed_model.encode([query])[0].tolist()
-    session = SessionLocal()
-
-    result = (
-        session.query(
-            Document.doc_id,
-            Document.text,
-            Document.chunk_index,
-            Document.original_file_id.label("filename"),
-            func.l2_distance(Document.embedding, cast(query_embedding, Vector(768))).label("distance")
-        )
-        .filter(Document.space_id == space_id)
-        .order_by("distance")
-        .limit(top_k)
-        .all()
-)
-    session.close()
-    return [{"doc_id": r[0], "text": r[1], "distance": r[2]} for r in result]
-
 def query_documents_hybrid(query, top_k=10, space_id="default"):
     query_embedding = embed_model.encode([query])[0].tolist()
     session = SessionLocal()
@@ -115,3 +94,50 @@ def expand_query(query: str) -> str:
             expanded_terms.extend(synonyms)
 
     return " ".join(expanded_terms)
+
+def get_all_chunks_from_space(space_id: str, max_chunks: int = 50):
+    session = SessionLocal()
+
+    try:
+        results = (
+            session.query(
+                Document.doc_id,
+                Document.text,
+                Document.chunk_index,
+                Document.original_file_id.label("filename"),
+            )
+            .filter(Document.space_id == space_id)
+            .order_by(Document.original_file_id, Document.chunk_index)
+            .limit(max_chunks)
+            .all()
+        )
+
+        session.close()
+        return [
+            {
+                "doc_id": r[0],
+                "text": r[1],
+                "chunk_index": r[2],
+                "filename": r[3]
+            }
+            for r in results
+        ]
+    except Exception as e:
+        session.close()
+        raise e
+    
+def classify_query(query: str) -> str:
+
+    query_lower = query.lower()
+
+    analyze_all_keywords = [
+        "summarize", "summary", "overview", "key points", "main ideas", "synthesize",
+        "main conclusions", "extract insights", "best practices", "recommendations",
+        "bullet points", "concise", "brief", "what are the", "list the"
+    ]
+
+    for keyword in analyze_all_keywords:
+        if keyword in query_lower:
+            return "analyze_all"
+        
+    return "specific"

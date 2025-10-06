@@ -7,7 +7,7 @@ import tiktoken
 
 from config.config import settings
 from pdf_utils import extract_text, chunk_text
-from vector_store import query_documents_hybrid, upload_document, query_documents, expand_query
+from vector_store import query_documents_hybrid, upload_document, expand_query, classify_query, get_all_chunks_from_space
 from db_utils import get_all_spaces, get_documents_by_space, update_space_name
 
 app = FastAPI(title="PaperTalk")
@@ -40,42 +40,88 @@ def ask(body: AskBody):
 
     try:
         encoder = tiktoken.get_encoding("cl100k_base")
-        expanded_query = expand_query(body.query)
-        relevant_chunks = query_documents_hybrid(expanded_query, top_k=10, space_id=body.space_id)
+        query_type = classify_query(body.query)
 
-        if not relevant_chunks:
-            return {"answer": "No relevant information found.", "sources": []}
-
-        if relevant_chunks:
-            distance_threshold = 1.0
-            relevant_chunks = [chunk for chunk in relevant_chunks if chunk.get('distance', 999) < distance_threshold]
-            relevant_chunks = relevant_chunks[:5]
-
-        context_parts = []
-        sources = []
-        max_context_tokens = 2500
-        current_tokens = 0
-
-        for i, chunk in enumerate(relevant_chunks, 1):
-            chunk_text = chunk['text']
-            chunk_context = f"[Source {i} - Document: {chunk['doc_id']}]\n{chunk_text}"
+        if query_type == "analyze_all":
+            relevant_chunks = get_all_chunks_from_space(body.space_id, max_chunks=30)
             
-            chunk_tokens = len(encoder.encode(chunk_context))
-            if current_tokens + chunk_tokens > max_context_tokens:
-                break
+            if not relevant_chunks:
+                return {"answer": "No documents found in this space.", "sources": []}
             
-            context_parts.append(chunk_context)
-            current_tokens += chunk_tokens
-            sources.append({
-                "doc_id": chunk['doc_id'],
-                "filename": chunk.get('filename', 'N/A'),
-                "chunk_text": chunk['text'],
-                "relevance_score": chunk.get('distance', 'N/A')
-            })
+            context_parts = []
+            sources = []
+            max_context_tokens = 3500
+            current_tokens = 0
+            
+            for i, chunk in enumerate(relevant_chunks, 1):
+                chunk_text = chunk['text']
+                chunk_context = f"[Document: {chunk['filename']}, Section {chunk['chunk_index']}]\n{chunk_text}"
+                
+                chunk_tokens = len(encoder.encode(chunk_context))
+                if current_tokens + chunk_tokens > max_context_tokens:
+                    break
+                
+                context_parts.append(chunk_context)
+                current_tokens += chunk_tokens
+                sources.append({
+                    "doc_id": chunk['doc_id'],
+                    "filename": chunk.get('filename', 'N/A'),
+                    "chunk_text": chunk['text'],
+                    "relevance_score": "all_docs"
+                })
+            
+            context = "\n\n---\n\n".join(context_parts)
+            
+            prompt = f"""You are a helpful AI assistant analyzing a collection of documents.
+INSTRUCTIONS:
+- Synthesize information from ALL provided documents
+- Identify patterns, themes, and key points across documents
+- Provide a comprehensive answer based on the entire document set
+- Structure your response clearly with sections if needed
 
-        context = "\n\n---\n\n".join(context_parts)
-        print(context)
-        prompt = f"""You are a helpful AI assistant. Analyze the following context carefully and 
+DOCUMENTS:
+{context}
+
+USER REQUEST: {body.query}
+
+RESPONSE:"""
+        else:
+            expanded_query = expand_query(body.query)
+            relevant_chunks = query_documents_hybrid(expanded_query, top_k=10, space_id=body.space_id)
+
+            if not relevant_chunks:
+                return {"answer": "No relevant information found.", "sources": []}
+
+            if relevant_chunks:
+                distance_threshold = 1.0
+                relevant_chunks = [chunk for chunk in relevant_chunks if chunk.get('distance', 999) < distance_threshold]
+                relevant_chunks = relevant_chunks[:5]
+
+            context_parts = []
+            sources = []
+            max_context_tokens = 2500
+            current_tokens = 0
+
+            for i, chunk in enumerate(relevant_chunks, 1):
+                chunk_text = chunk['text']
+                chunk_context = f"[Source {i} - Document: {chunk['doc_id']}]\n{chunk_text}"
+
+                chunk_tokens = len(encoder.encode(chunk_context))
+                if current_tokens + chunk_tokens > max_context_tokens:
+                    break
+                
+                context_parts.append(chunk_context)
+                current_tokens += chunk_tokens
+                sources.append({
+                    "doc_id": chunk['doc_id'],
+                    "filename": chunk.get('filename', 'N/A'),
+                    "chunk_text": chunk['text'],
+                    "relevance_score": chunk.get('distance', 'N/A')
+                })
+
+            context = "\n\n---\n\n".join(context_parts)
+            print(context)
+            prompt = f"""You are a helpful AI assistant. Analyze the following context carefully and 
   answer the question.
 
   INSTRUCTIONS:
@@ -143,26 +189,6 @@ def read_pdf(space_id: str = Form(...), file: UploadFile = File(...)):
     os.remove(file_location)
     return {"fileid": file_id, "chunk_count": len(chunks)}
 
-@app.post("/search")
-def search(body: AskBody):
-    try:
-        results = query_documents(body.query, 3, body.space_id)
-        if not results:
-            return {
-                "query": body.query,
-                "results": [],
-                "count": 0,
-                "message": "No relevant documents found"
-            }
-
-        return {
-                "query": body.query,
-                "results": results,
-                "count": len(results)
-        }
-    except Exception as e:
-        return {"error": str(e)}, 500
-    
 @app.get("/spaces")
 def get_spaces():
     spaces = get_all_spaces()
