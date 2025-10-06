@@ -1,16 +1,34 @@
-from fastapi import FastAPI, UploadFile, File, Form
-from google import genai
-from pydantic import BaseModel
-import os
+import logging
+from typing import List
+
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-import tiktoken
 
 from config.config import settings
-from pdf_utils import extract_text, chunk_text
-from vector_store import query_documents_hybrid, upload_document, expand_query, classify_query, get_all_chunks_from_space
+from models import (
+    AskRequest,
+    AskResponse,
+    RenameSpaceRequest,
+    UploadResponse,
+    SpaceResponse,
+    DocumentsResponse,
+    MessageResponse
+)
+from services.query_service import QueryService
+from services.document_service import DocumentService
 from db_utils import get_all_spaces, get_documents_by_space, update_space_name
 
-app = FastAPI(title="PaperTalk")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(
+    title="PaperTalk",
+    description="Document analysis and Q&A system",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,193 +38,115 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = genai.Client(api_key=settings.GEMINI_API_KEY)
+query_service = QueryService()
+document_service = DocumentService()
 
-@app.get("/")
-def hello():
-    return "runing.."
 
-class AskBody(BaseModel):
-    space_id: str
-    query: str
+@app.get("/", tags=["Health"])
+def health_check() -> dict:
+    return {"status": "running"}
 
-class RenameSpaceBody(BaseModel):
-    new_name: str
 
-@app.post("/ask")
-def ask(body: AskBody):
-    if not body.query or not body.space_id:
-        return {"error": "Both 'query' and 'space_id' are required"}, 400
-
+@app.post("/ask", response_model=AskResponse, tags=["Query"])
+def ask_question(body: AskRequest) -> AskResponse:
     try:
-        encoder = tiktoken.get_encoding("cl100k_base")
-        query_type = classify_query(body.query)
+        result = query_service.process_query(body.space_id, body.query)
+        return AskResponse(**result)
 
-        if query_type == "analyze_all":
-            relevant_chunks = get_all_chunks_from_space(body.space_id, max_chunks=30)
-            
-            if not relevant_chunks:
-                return {"answer": "No documents found in this space.", "sources": []}
-            
-            context_parts = []
-            sources = []
-            max_context_tokens = 3500
-            current_tokens = 0
-            
-            for i, chunk in enumerate(relevant_chunks, 1):
-                chunk_text = chunk['text']
-                chunk_context = f"[Document: {chunk['filename']}, Section {chunk['chunk_index']}]\n{chunk_text}"
-                
-                chunk_tokens = len(encoder.encode(chunk_context))
-                if current_tokens + chunk_tokens > max_context_tokens:
-                    break
-                
-                context_parts.append(chunk_context)
-                current_tokens += chunk_tokens
-                sources.append({
-                    "doc_id": chunk['doc_id'],
-                    "filename": chunk.get('filename', 'N/A'),
-                    "chunk_text": chunk['text'],
-                    "relevance_score": "all_docs"
-                })
-            
-            context = "\n\n---\n\n".join(context_parts)
-            
-            prompt = f"""You are a helpful AI assistant analyzing a collection of documents.
-INSTRUCTIONS:
-- Synthesize information from ALL provided documents
-- Identify patterns, themes, and key points across documents
-- Provide a comprehensive answer based on the entire document set
-- Structure your response clearly with sections if needed
-
-DOCUMENTS:
-{context}
-
-USER REQUEST: {body.query}
-
-RESPONSE:"""
-        else:
-            expanded_query = expand_query(body.query)
-            relevant_chunks = query_documents_hybrid(expanded_query, top_k=10, space_id=body.space_id)
-
-            if not relevant_chunks:
-                return {"answer": "No relevant information found.", "sources": []}
-
-            if relevant_chunks:
-                distance_threshold = 1.0
-                relevant_chunks = [chunk for chunk in relevant_chunks if chunk.get('distance', 999) < distance_threshold]
-                relevant_chunks = relevant_chunks[:5]
-
-            context_parts = []
-            sources = []
-            max_context_tokens = 2500
-            current_tokens = 0
-
-            for i, chunk in enumerate(relevant_chunks, 1):
-                chunk_text = chunk['text']
-                chunk_context = f"[Source {i} - Document: {chunk['doc_id']}]\n{chunk_text}"
-
-                chunk_tokens = len(encoder.encode(chunk_context))
-                if current_tokens + chunk_tokens > max_context_tokens:
-                    break
-                
-                context_parts.append(chunk_context)
-                current_tokens += chunk_tokens
-                sources.append({
-                    "doc_id": chunk['doc_id'],
-                    "filename": chunk.get('filename', 'N/A'),
-                    "chunk_text": chunk['text'],
-                    "relevance_score": chunk.get('distance', 'N/A')
-                })
-
-            context = "\n\n---\n\n".join(context_parts)
-            print(context)
-            prompt = f"""You are a helpful AI assistant. Analyze the following context carefully and 
-  answer the question.
-
-  INSTRUCTIONS:
-  - Synthesize information from multiple sources if needed
-  - Extract key insights and best practices mentioned in the context
-  - If the answer requires combining information from different parts, do so intelligently
-  - Only say "cannot be answered" if the context is completely irrelevant
-  - Be specific and cite which sources support your answer
-
-  CONTEXT:
-  {context}
-
-  QUESTION: {body.query}
-
-  ANSWER:"""
-
-        res = client.models.generate_content(
-            model="gemini-2.0-flash", 
-            contents=prompt,
-            config={
-                "temperature": 0.4,
-                "max_output_tokens": 1024,
-                "top_p": 0.9,
-                "top_k": 40
-            }
+    except ValueError as e:
+        logger.warning(f"Invalid query: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
         )
-        if not res or not res.text:
-            return {"error": "Failed to generate response", "sources": sources}
 
-        return {
-            "answer": res.text, 
-            "sources": sources,
-            "debug": {
-                "context_tokens": current_tokens,
-                "chunks_used": len(context_parts),
-                "chunks_available": len(relevant_chunks)
-            }
-        }
     except Exception as e:
-        print(f"Error in /ask endpoint: {str(e)}")
-        return {"error": "An error occurred processing your request"}, 500
-    
-@app.post("/uploadpdf")
-def read_pdf(space_id: str = Form(...), file: UploadFile = File(...)):
-    if not space_id:
-        return {"error": "Space ID is required"}, 400
+        logger.error(f"Error processing query: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred processing your request"
+        )
 
-    if not file.filename.lower().endswith(('.pdf', '.txt')):
-        return {"error": "Unsupported file type"}, 400
-    
-    if file.size > 10 * 1024 * 1024:
-        return {"error": "File too large"}, 400
-    
-    file_location = f"temp_{file.filename}"
-    with open(file_location, "wb") as f:
-        f.write(file.file.read())
 
-    text = extract_text(file_location)
-    if text is None:
-        return {"error": "Failed to extract text from PDF"}
+@app.post("/uploadpdf", response_model=UploadResponse, tags=["Documents"])
+def upload_document(
+    space_id: str = Form(...),
+    file: UploadFile = File(...)
+) -> UploadResponse:
+    try:
+        document_service.validate_file(file.filename, file.size)
 
-    chunks = chunk_text(text)
-    file_id = upload_document(chunks, space_id, file.filename)
+        file_content = file.file.read()
+        file_id, chunk_count = document_service.process_document(
+            file_content,
+            file.filename,
+            space_id
+        )
 
-    os.remove(file_location)
-    return {"fileid": file_id, "chunk_count": len(chunks)}
+        return UploadResponse(fileid=file_id, chunk_count=chunk_count)
 
-@app.get("/spaces")
-def get_spaces():
-    spaces = get_all_spaces()
+    except ValueError as e:
+        logger.warning(f"Invalid file upload: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
-    return spaces
+    except Exception as e:
+        logger.error(f"Error uploading document: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload document"
+        )
 
-@app.get("/getdocuments/{space_id}")
-def get_documents(space_id: str):
-    documents = get_documents_by_space(space_id)
-    return {"documents": documents}
 
-@app.patch("/spaces/{space_id}")
-def rename_space(space_id: str, body: RenameSpaceBody):
-    if not space_id or not body.new_name:
-        return {"error": "Both 'space_id' and 'new_name' are required"}, 400
+@app.get("/spaces", response_model=List[SpaceResponse], tags=["Spaces"])
+def list_spaces() -> List[SpaceResponse]:
+    try:
+        spaces = get_all_spaces()
+        return [SpaceResponse(**space) for space in spaces]
 
-    success = update_space_name(space_id, body.new_name)
-    if success:
-        return {"message": "Space name updated successfully"}
-    else:
-        return {"error": "Space not found"}, 404
+    except Exception as e:
+        logger.error(f"Error retrieving spaces: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve spaces"
+        )
+
+
+@app.get("/getdocuments/{space_id}", response_model=DocumentsResponse, tags=["Documents"])
+def list_documents(space_id: str) -> DocumentsResponse:
+    try:
+        documents = get_documents_by_space(space_id)
+        return DocumentsResponse(documents=documents)
+
+    except Exception as e:
+        logger.error(f"Error retrieving documents: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve documents"
+        )
+
+
+@app.patch("/spaces/{space_id}", response_model=MessageResponse, tags=["Spaces"])
+def rename_space(space_id: str, body: RenameSpaceRequest) -> MessageResponse:
+    try:
+        success = update_space_name(space_id, body.new_name)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Space not found"
+            )
+
+        return MessageResponse(message="Space name updated successfully")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Error renaming space: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to rename space"
+        )

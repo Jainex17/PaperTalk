@@ -1,0 +1,53 @@
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field
+
+
+class AskRequest(BaseModel):
+    space_id: str = Field(..., description="ID of the space to query")
+    query: str = Field(..., min_length=1, description="User's question")
+
+
+class RenameSpaceRequest(BaseModel):
+    new_name: str = Field(..., min_length=1, description="New name for the space")
+
+
+class SourceDocument(BaseModel):
+    doc_id: str
+    filename: str
+    chunk_text: str
+    relevance_score: Any
+
+
+class DebugInfo(BaseModel):
+    context_tokens: int
+    chunks_used: int
+    chunks_available: int
+
+
+class AskResponse(BaseModel):
+    answer: str
+    sources: List[SourceDocument]
+    debug: Optional[DebugInfo] = None
+
+
+class ErrorResponse(BaseModel):
+    error: str
+
+
+class UploadResponse(BaseModel):
+    fileid: str
+    chunk_count: int
+
+
+class SpaceResponse(BaseModel):
+    id: str
+    name: str
+    created_at: str
+
+
+class DocumentsResponse(BaseModel):
+    documents: List[str]
+
+
+class MessageResponse(BaseModel):
+    message: str
