@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 class AskRequest(BaseModel):
     space_id: str = Field(..., description="ID of the space to query")
     query: str = Field(..., min_length=1, description="User's question")
+    is_first_message: bool = Field(default=False, description="Flag to clear chat history")
 
 
 class RenameSpaceRequest(BaseModel):

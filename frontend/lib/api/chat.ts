@@ -6,7 +6,7 @@ interface AskResponse {
   sources?: Source[];
 }
 
-export const sendMessage = async (spaceId: string, query: string): Promise<AskResponse> => {
+export const sendMessage = async (spaceId: string, query: string, isFirstMessage: boolean = false): Promise<AskResponse> => {
   try {
     const response = await fetch(`${API_URL}/ask`, {
       method: 'POST',
@@ -16,6 +16,7 @@ export const sendMessage = async (spaceId: string, query: string): Promise<AskRe
       body: JSON.stringify({
         space_id: spaceId,
         query,
+        is_first_message: isFirstMessage,
       }),
     });
 

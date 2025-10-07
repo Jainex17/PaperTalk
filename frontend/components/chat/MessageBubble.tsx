@@ -19,6 +19,16 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     ol: ({ ...props }) => <ol className="list-decimal ml-5 my-2 space-y-1" {...props} />,
     li: ({ ...props }) => <li className="leading-relaxed text-foreground" {...props} />,
     p: ({ ...props }) => <p className="leading-relaxed mb-2 text-foreground" {...props} />,
+    table: ({ ...props }) => (
+      <div className="overflow-x-auto my-4">
+        <table {...props} />
+      </div>
+    ),
+    thead: ({ ...props }) => <thead {...props} />,
+    tbody: ({ ...props }) => <tbody {...props} />,
+    tr: ({ ...props }) => <tr {...props} />,
+    th: ({ ...props }) => <th {...props} />,
+    td: ({ ...props }) => <td {...props} />,
     code: ({ className, children, ...props }: any) => {
       const isInline = !className;
       return isInline ? (
@@ -36,7 +46,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const renderMessageWithCitations = (content: string, sources?: Source[]) => {
     if (!sources || sources.length === 0) {
       return (
-        <div className="text-sm">
+        <div className="text-sm markdown-table">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={markdownComponents}
@@ -164,7 +174,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     };
 
     return (
-      <div className="text-sm">
+      <div className="text-sm markdown-table">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={componentsWithCitations}

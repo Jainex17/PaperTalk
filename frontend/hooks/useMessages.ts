@@ -20,7 +20,8 @@ export const useMessages = (spaceId: string) => {
     setLoading(true);
 
     try {
-      const data = await sendMessageAPI(spaceId, input);
+      const isFirstMessage = messages.length === 0;
+      const data = await sendMessageAPI(spaceId, input, isFirstMessage);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),

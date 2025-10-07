@@ -43,3 +43,18 @@ CLASSIFICATION_PROMPT_TEMPLATE = """Analyze the user's query and classify it int
 User's query: "{query}"
 
 Respond with ONLY one word: specific, analyze_all, or prev_context"""
+
+PREV_CONTEXT_PROMPT_TEMPLATE = """You are a helpful AI assistant. The user is following up on a previous conversation.
+
+CONVERSATION HISTORY:
+{chat_history}
+
+USER'S FOLLOW-UP: {query}
+
+INSTRUCTIONS:
+- Answer based on the conversation history above
+- If the user wants reformatting, reformat the previous response accordingly
+- If the user wants clarification, explain based on previous context
+- Keep your response concise and relevant
+
+RESPONSE:"""

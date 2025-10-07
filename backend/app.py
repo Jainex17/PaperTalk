@@ -50,7 +50,7 @@ def health_check() -> dict:
 @app.post("/ask", response_model=AskResponse, tags=["Query"])
 def ask_question(body: AskRequest) -> AskResponse:
     try:
-        result = query_service.process_query(body.space_id, body.query)
+        result = query_service.process_query(body.space_id, body.query, body.is_first_message)
         return AskResponse(**result)
 
     except ValueError as e:
