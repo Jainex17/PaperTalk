@@ -6,13 +6,17 @@ from typing import List, Dict, Any
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import func, cast, text
 from pgvector.sqlalchemy import Vector
+from google import genai
 
 from db_utils import get_db_session, Document, Spaces
 from constants import DEFAULT_SPACE_NAME, QUERY_TYPE_ANALYZE_ALL
+from config.config import settings
+from prompts import CLASSIFICATION_PROMPT_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
 embed_model = SentenceTransformer("all-mpnet-base-v2")
+genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 def upload_document(chunks: List[str], space_id: str, filename: str = None) -> str:
     file_id = str(uuid.uuid4())
@@ -149,18 +153,28 @@ def get_all_chunks_from_space(space_id: str, max_chunks: int = 50) -> List[Dict[
             raise
 
 def classify_query(query: str) -> str:
-    query_lower = query.lower()
+    try:
+        classification_prompt = CLASSIFICATION_PROMPT_TEMPLATE.format(query=query)
 
-    analyze_all_keywords = [
-        "summarize", "summary", "overview", "key points", "main ideas", "synthesize",
-        "main conclusions", "extract insights", "best practices", "recommendations",
-        "bullet points", "concise", "brief", "what are the", "list the"
-    ]
+        response = genai_client.models.generate_content(
+            model="gemini-2.0-flash-exp",
+            contents=classification_prompt,
+            config={
+                "temperature": 0.1,
+                "max_output_tokens": 10,
+            }
+        )
 
-    for keyword in analyze_all_keywords:
-        if keyword in query_lower:
-            logger.debug(f"Classified query as 'analyze_all' based on keyword: {keyword}")
-            return "analyze_all"
+        classification = response.text.strip().lower()
 
-    logger.debug("Classified query as 'specific'")
-    return "specific"
+        # Validate and default to specific if invalid
+        if classification not in ["specific", "analyze_all", "prev_context"]:
+            logger.warning(f"Invalid classification '{classification}', defaulting to 'specific'")
+            classification = "specific"
+
+        logger.info(f"Query classified as: {classification}")
+        return classification
+
+    except Exception as e:
+        logger.error(f"Error classifying query with AI: {str(e)}, defaulting to 'specific'")
+        return "specific"
