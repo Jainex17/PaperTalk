@@ -55,7 +55,8 @@ class ContextBuilder:
 
         for i, chunk in enumerate(filtered_chunks, 1):
             chunk_text = chunk['text']
-            chunk_context = f"[Source {i} - Document: {chunk['doc_id']}]\n{chunk_text}"
+            filename = chunk.get('filename', 'N/A')
+            chunk_context = f"[Source {i} - {filename}]\n{chunk_text}"
 
             chunk_tokens = len(self.encoder.encode(chunk_context))
             if current_tokens + chunk_tokens > max_tokens:
@@ -65,7 +66,7 @@ class ContextBuilder:
             current_tokens += chunk_tokens
             sources.append({
                 "doc_id": chunk['doc_id'],
-                "filename": chunk.get('filename', 'N/A'),
+                "filename": filename,
                 "chunk_text": chunk['text'],
                 "relevance_score": chunk.get('distance', 'N/A')
             })

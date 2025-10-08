@@ -19,7 +19,7 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const { messages, loading, sendMessage } = useMessages(spaceid);
-  const { documents, loadingDocuments, uploadDocument } = useDocuments(spaceid);
+  const { documents, loadingDocuments, uploadDocument, deleteDocument } = useDocuments(spaceid);
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
@@ -93,6 +93,9 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
         documents={documents}
         loadingDocuments={loadingDocuments}
         onFileUpload={uploadDocument}
+        onDeleteDocument={async (documentId: string) => {
+          await deleteDocument(documentId);
+        }}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Document } from '@/types';
-import { getDocuments as getDocumentsAPI, uploadDocument as uploadDocumentAPI } from '@/lib/api/documents';
+import { getDocuments as getDocumentsAPI, uploadDocument as uploadDocumentAPI, deleteDocument as deleteDocumentAPI } from '@/lib/api/documents';
 import { getFileType } from '@/lib/utils';
 
 export const useDocuments = (spaceId: string) => {
@@ -12,6 +12,7 @@ export const useDocuments = (spaceId: string) => {
     try {
       const docs = await getDocumentsAPI(spaceId);
       const formattedDocs: Document[] = docs.map((doc: string) => ({
+        id: doc,
         name: doc,
         type: getFileType(doc),
         isUploading: false
@@ -44,7 +45,7 @@ export const useDocuments = (spaceId: string) => {
       setDocuments(prev =>
         prev.map(doc =>
           doc.name === file.name
-            ? { ...doc, isUploading: false }
+            ? { ...doc, id: file.name, isUploading: false }
             : doc
         )
       );
@@ -55,5 +56,15 @@ export const useDocuments = (spaceId: string) => {
     }
   };
 
-  return { documents, loadingDocuments, uploadDocument, refetch: fetchDocuments };
+  const deleteDocument = async (documentId: string) => {
+    try {
+      await deleteDocumentAPI(spaceId, documentId);
+      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+    } catch (error) {
+      console.error('Delete error:', error);
+      throw error;
+    }
+  };
+
+  return { documents, loadingDocuments, uploadDocument, deleteDocument, refetch: fetchDocuments };
 };

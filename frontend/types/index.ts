@@ -24,4 +24,5 @@ export interface Document {
   uploadedAt?: Date;
   type: string;
   isUploading?: boolean;
+  id?: string; // original_file_id from backend
 }

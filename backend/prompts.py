@@ -20,7 +20,8 @@ INSTRUCTIONS:
 - Extract key insights and best practices mentioned in the context
 - If the answer requires combining information from different parts, do so intelligently
 - Only say "cannot be answered" if the context is completely irrelevant
-- Be specific and cite which sources support your answer
+- IMPORTANT: Cite sources using the format (Source 1), (Source 2), etc. exactly as they appear in the context
+- Add citations immediately after relevant statements
 
 CONTEXT:
 {context}
@@ -39,10 +40,15 @@ CLASSIFICATION_PROMPT_TEMPLATE = """Analyze the user's query and classify it int
    - Continuation: "what else", "tell me more", "continue"
    - Simple acknowledgments: "thanks", "ok", "got it"
    - Pronouns referring to previous content: "summarize it", "explain that", "rewrite this"
+4. "cross_document" - User wants to connect/apply information from one document to information in another document. Look for:
+   - "Based on [document A], guide me using [document B]"
+   - "Using information from [document A], suggest steps from [document B]"
+   - "Apply insights from [doc A] to content in [doc B]"
+   - "According to [doc A], what does [doc B] recommend?"
 
 User's query: "{query}"
 
-Respond with ONLY one word: specific, analyze_all, or prev_context"""
+Respond with ONLY one word: specific, analyze_all, prev_context, or cross_document"""
 
 PREV_CONTEXT_PROMPT_TEMPLATE = """You are a helpful AI assistant. The user is following up on a previous conversation.
 
@@ -58,3 +64,37 @@ INSTRUCTIONS:
 - Keep your response concise and relevant
 
 RESPONSE:"""
+
+CROSS_DOCUMENT_PROMPT_TEMPLATE = """You are a helpful AI assistant performing cross-document analysis.
+
+The user wants to connect information from multiple documents. Your task is to:
+1. Extract relevant information from the SOURCE document(s)
+2. Use that information to query/apply insights from the TARGET document(s)
+3. Synthesize a comprehensive answer
+
+DOCUMENT CONTEXT:
+{context}
+
+USER REQUEST: {query}
+
+INSTRUCTIONS:
+- Identify which document(s) serve as the source and which as the target
+- Extract key information from source document(s)
+- Apply or connect that information with content from target document(s)
+- Provide a clear, actionable response that bridges both documents
+- IMPORTANT: Cite sources using the format (Source 1), (Source 2), etc. exactly as they appear in the context
+- Add citations immediately after relevant statements to show which document each piece of information comes from
+
+RESPONSE:"""
+
+EXTRACT_SOURCE_INFO_TEMPLATE = """You are extracting key information from a source document to answer a cross-document query.
+
+SOURCE DOCUMENT CHUNKS:
+{source_chunks}
+
+ORIGINAL USER QUERY: {original_query}
+
+TASK: Extract the most important information from the source document that will help answer the user's query.
+Focus on key facts, attributes, themes, or context that can be used to search the target document.
+
+EXTRACTED KEY INFORMATION:"""

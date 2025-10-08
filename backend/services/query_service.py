@@ -9,16 +9,24 @@ from vector_store import (
     classify_query,
     get_all_chunks_from_space
 )
-from prompts import ANALYZE_ALL_PROMPT_TEMPLATE, SPECIFIC_QUERY_PROMPT_TEMPLATE, PREV_CONTEXT_PROMPT_TEMPLATE
+from prompts import (
+    ANALYZE_ALL_PROMPT_TEMPLATE,
+    SPECIFIC_QUERY_PROMPT_TEMPLATE,
+    PREV_CONTEXT_PROMPT_TEMPLATE,
+    CROSS_DOCUMENT_PROMPT_TEMPLATE,
+    EXTRACT_SOURCE_INFO_TEMPLATE
+)
 from constants import (
     MAX_CONTEXT_TOKENS_ANALYZE_ALL,
     MAX_CONTEXT_TOKENS_SPECIFIC,
+    MAX_CONTEXT_TOKENS_CROSS_DOCUMENT,
     TOP_K_CHUNKS,
     MAX_CHUNKS_ANALYZE_ALL,
     MAX_RELEVANT_CHUNKS,
     DISTANCE_THRESHOLD,
     QUERY_TYPE_ANALYZE_ALL,
-    QUERY_TYPE_PREV_CONTEXT
+    QUERY_TYPE_PREV_CONTEXT,
+    QUERY_TYPE_CROSS_DOCUMENT
 )
 
 logger = logging.getLogger(__name__)
@@ -42,6 +50,8 @@ class QueryService:
             result = self._process_analyze_all_query(space_id, query)
         elif query_type == QUERY_TYPE_PREV_CONTEXT:
             result = self._process_prev_context_query(space_id, query)
+        elif query_type == QUERY_TYPE_CROSS_DOCUMENT:
+            result = self._process_cross_document_query(space_id, query)
         else:
             result = self._process_specific_query(space_id, query)
 
@@ -138,8 +148,6 @@ class QueryService:
             DISTANCE_THRESHOLD
         )
 
-        logger.info(f"Context: {context}")
-
         prompt = SPECIFIC_QUERY_PROMPT_TEMPLATE.format(
             context=context,
             query=query
@@ -157,5 +165,83 @@ class QueryService:
                 "context_tokens": current_tokens,
                 "chunks_used": len(sources),
                 "chunks_available": len(relevant_chunks)
+            }
+        }
+
+    def _process_cross_document_query(self, space_id: str, query: str) -> Dict[str, Any]:
+        """
+        Document-aware two-stage retrieval for cross-document queries:
+        1. Retrieve initial relevant chunks using semantic search
+        2. Extract key info and query target document(s)
+        3. Synthesize results from multiple documents
+        """
+
+        source_chunks = query_documents_hybrid(
+            query,
+            top_k=10,
+            space_id=space_id
+        )
+
+        if not source_chunks:
+            raise ValueError("No relevant information found.")
+
+        source_context = "\n\n".join([
+            f"[{chunk['filename']}]\n{chunk['text']}"
+            for chunk in source_chunks[:5]
+        ])
+
+        extract_prompt = EXTRACT_SOURCE_INFO_TEMPLATE.format(
+            source_chunks=source_context,
+            original_query=query
+        )
+
+        extracted_info = self.ai_service.generate_response(extract_prompt)
+        logger.info(f"Extracted info from source: {extracted_info[:200]}...")
+
+        enhanced_query = f"{extracted_info} {query}"
+        target_chunks = query_documents_hybrid(
+            enhanced_query,
+            top_k=TOP_K_CHUNKS,
+            space_id=space_id
+        )
+
+        all_chunk_ids = set()
+        combined_chunks = []
+
+        for chunk in source_chunks[:5]:
+            if chunk['doc_id'] not in all_chunk_ids:
+                all_chunk_ids.add(chunk['doc_id'])
+                combined_chunks.append(chunk)
+
+        for chunk in target_chunks[:5]:
+            if chunk['doc_id'] not in all_chunk_ids:
+                all_chunk_ids.add(chunk['doc_id'])
+                combined_chunks.append(chunk)
+
+        context, sources, current_tokens = self.context_builder.build_context_for_specific_query(
+            combined_chunks,
+            MAX_CONTEXT_TOKENS_CROSS_DOCUMENT,
+            DISTANCE_THRESHOLD
+        )
+
+        prompt = CROSS_DOCUMENT_PROMPT_TEMPLATE.format(
+            context=context,
+            query=query
+        )
+
+        answer = self.ai_service.generate_response(prompt)
+
+        if not answer:
+            raise Exception("Failed to generate response")
+
+        return {
+            "answer": answer,
+            "sources": sources,
+            "debug": {
+                "context_tokens": current_tokens,
+                "chunks_used": len(sources),
+                "chunks_available": len(combined_chunks),
+                "source_chunks": len(source_chunks),
+                "target_chunks": len(target_chunks)
             }
         }

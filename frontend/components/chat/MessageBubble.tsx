@@ -99,28 +99,28 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       };
 
       return (
-        <>
+        <span className="relative inline-block">
           <span
             ref={citationRef}
-            className="relative inline-block"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
             <sup className="text-primary cursor-help font-medium">[{sourceNum}]</sup>
           </span>
           {isVisible && (
-            <div
-              className="fixed w-80 max-w-[90vw] bg-popover text-popover-foreground text-xs rounded-lg p-3 shadow-lg border border-border z-[9999] transform -translate-x-1/2"
+            <span
+              className="fixed w-72 max-w-[90vw] bg-popover text-popover-foreground text-xs rounded-lg p-3 shadow-lg border border-border z-[9999] block max-h-40 overflow-hidden"
               style={{
                 top: `${tooltipPosition.top}px`,
                 left: `${tooltipPosition.left}px`,
+                transform: 'translateX(-50%)',
               }}
             >
-              <div className="font-semibold mb-1">{source.filename}</div>
-              <div className="text-muted-foreground line-clamp-6">{source.chunk_text}</div>
-            </div>
+              <span className="font-semibold mb-1 block text-sm">{source.filename}</span>
+              <span className="text-muted-foreground line-clamp-4 block text-xs">{source.chunk_text}</span>
+            </span>
           )}
-        </>
+        </span>
       );
     };
 

@@ -96,3 +96,29 @@ def update_space_name(space_id: str, new_name: str) -> bool:
             logger.error(f"Error updating space {space_id}: {str(e)}", exc_info=True)
             session.rollback()
             raise
+
+def delete_document(space_id: str, original_file_id: str) -> int:
+    """Delete all chunks of a document from a specific space.
+
+    Args:
+        space_id: The space ID containing the document
+        original_file_id: The original file ID to delete
+
+    Returns:
+        Number of chunks deleted
+    """
+    with get_db_session() as session:
+        try:
+            deleted_count = session.query(Document).filter(
+                Document.space_id == space_id,
+                Document.original_file_id == original_file_id
+            ).delete()
+
+            session.commit()
+            logger.info(f"Deleted {deleted_count} chunks for document '{original_file_id}' in space {space_id}")
+            return deleted_count
+
+        except Exception as e:
+            logger.error(f"Error deleting document {original_file_id} from space {space_id}: {str(e)}", exc_info=True)
+            session.rollback()
+            raise

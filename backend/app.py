@@ -16,7 +16,7 @@ from models import (
 )
 from services.query_service import QueryService
 from services.document_service import DocumentService
-from db_utils import get_all_spaces, get_documents_by_space, update_space_name
+from db_utils import get_all_spaces, get_documents_by_space, update_space_name, delete_document
 
 logging.basicConfig(
     level=logging.INFO,
@@ -149,4 +149,28 @@ def rename_space(space_id: str, body: RenameSpaceRequest) -> MessageResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to rename space"
+        )
+
+
+@app.delete("/documents/{space_id}/{file_id}", response_model=MessageResponse, tags=["Documents"])
+def delete_document_endpoint(space_id: str, file_id: str) -> MessageResponse:
+    try:
+        deleted_count = delete_document(space_id, file_id)
+
+        if deleted_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found in this space"
+            )
+
+        return MessageResponse(message=f"Document deleted successfully ({deleted_count} chunks removed)")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Error deleting document: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete document"
         )

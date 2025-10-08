@@ -18,12 +18,21 @@ export const useSpaceName = () => {
       return;
     }
 
+    // Store the previous name for rollback
+    const previousName = currentSpace.name;
+
+    // Optimistically update the UI
+    setCurrentSpace({ ...currentSpace, name: tempSpaceName });
+    setEditSpaceName(false);
+
     try {
       await updateSpaceNameAPI(currentSpace.id, tempSpaceName);
-      setCurrentSpace({ ...currentSpace, name: tempSpaceName });
-      setEditSpaceName(false);
+      // Success - name is already updated
     } catch (error) {
       console.error('Error saving space name:', error);
+      // Rollback to previous name on failure
+      setCurrentSpace({ ...currentSpace, name: previousName });
+      setTempSpaceName(previousName);
     }
   };
 

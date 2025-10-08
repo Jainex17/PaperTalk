@@ -35,3 +35,20 @@ export const uploadDocument = async (spaceId: string, file: File): Promise<{ mes
     throw error;
   }
 };
+
+export const deleteDocument = async (spaceId: string, fileId: string): Promise<{ message: string }> => {
+  try {
+    const response = await fetch(`${API_URL}/documents/${spaceId}/${encodeURIComponent(fileId)}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error('Delete failed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Delete error:', error);
+    throw error;
+  }
+};

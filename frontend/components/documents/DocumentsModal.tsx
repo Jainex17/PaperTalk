@@ -1,10 +1,11 @@
 'use client';
 
-import { useRef } from 'react';
-import { X, FileText, Loader2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { X, FileText, Loader2, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Document } from '@/types';
 import { MAX_FILES_FREE } from '@/lib/config';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface DocumentsModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface DocumentsModalProps {
   documents: Document[];
   loadingDocuments: boolean;
   onFileUpload: (file: File) => Promise<void>;
+  onDeleteDocument: (documentId: string, documentName: string) => Promise<void>;
 }
 
 export function DocumentsModal({
@@ -20,8 +22,11 @@ export function DocumentsModal({
   documents,
   loadingDocuments,
   onFileUpload,
+  onDeleteDocument,
 }: DocumentsModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -35,6 +40,24 @@ export function DocumentsModal({
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleDeleteClick = (doc: Document) => {
+    if (doc.id) {
+      setDocumentToDelete({ id: doc.id, name: doc.name });
+      setDeleteConfirmOpen(true);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (documentToDelete) {
+      try {
+        await onDeleteDocument(documentToDelete.id, documentToDelete.name);
+      } catch {
+        alert('Failed to delete document. Please try again.');
+      }
+      setDocumentToDelete(null);
     }
   };
 
@@ -135,6 +158,15 @@ export function DocumentsModal({
                           <p className="text-sm font-semibold text-foreground truncate">{doc.name}</p>
                           <p className="text-xs text-muted-foreground">{doc.type}</p>
                         </div>
+                        {!doc.isUploading && doc.id && (
+                          <button
+                            onClick={() => handleDeleteClick(doc)}
+                            className="opacity-0 group-hover:opacity-100 p-2 hover:bg-destructive/10 rounded-lg transition-all"
+                            title="Delete document"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </button>
+                        )}
                       </motion.div>
                     ))}
                   </div>
@@ -150,6 +182,19 @@ export function DocumentsModal({
               </div>
             </div>
           </motion.div>
+
+          <ConfirmDialog
+            isOpen={deleteConfirmOpen}
+            onClose={() => {
+              setDeleteConfirmOpen(false);
+              setDocumentToDelete(null);
+            }}
+            onConfirm={handleConfirmDelete}
+            title="Delete document?"
+            message={`Are you sure you want to delete "${documentToDelete?.name}"? This will remove all chunks associated with this document from the space.`}
+            confirmText="Delete"
+            cancelText="Cancel"
+          />
         </>
       )}
     </AnimatePresence>

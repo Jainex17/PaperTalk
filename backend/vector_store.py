@@ -167,8 +167,7 @@ def classify_query(query: str) -> str:
 
         classification = response.text.strip().lower()
 
-        # Validate and default to specific if invalid
-        if classification not in ["specific", "analyze_all", "prev_context"]:
+        if classification not in ["specific", "analyze_all", "prev_context", "cross_document"]:
             logger.warning(f"Invalid classification '{classification}', defaulting to 'specific'")
             classification = "specific"
 
