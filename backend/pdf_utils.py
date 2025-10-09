@@ -5,7 +5,7 @@ from typing import List, Optional
 from PyPDF2 import PdfReader
 import tiktoken
 
-from constants import CHUNK_TOKENS, CHUNK_OVERLAP, TIKTOKEN_ENCODING
+from constants import CHUNK_TOKENS, CHUNK_OVERLAP, TIKTOKEN_ENCODING, MAX_PDF_PAGES
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,11 @@ def _extract_from_txt(file_path: str) -> str:
 
 def _extract_from_pdf(file_path: str) -> str:
     reader = PdfReader(file_path)
+    num_pages = len(reader.pages)
+
+    if num_pages > MAX_PDF_PAGES:
+        raise ValueError(f"PDF has {num_pages} pages. Maximum allowed is {MAX_PDF_PAGES} pages.")
+
     text_parts = []
 
     for i, page in enumerate(reader.pages):
