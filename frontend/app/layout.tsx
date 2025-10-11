@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SpaceProvider } from "@/context/SpaceContext";
-import { GlobalProvider } from "@/context/GlobalContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "PaperTalk",
@@ -18,11 +18,11 @@ export default function RootLayout({
       <body
         className={`dark`}
       >
-        <GlobalProvider>
+        <AuthProvider>
           <SpaceProvider>
             {children}
           </SpaceProvider>
-        </GlobalProvider>
+        </AuthProvider>
       </body>
     </html>
   );

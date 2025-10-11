@@ -18,7 +18,7 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   const [hoveredPrompt, setHoveredPrompt] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { messages, loading, sendMessage } = useMessages(spaceid);
+  const { messages, loading, sendMessage, clearMessages } = useMessages(spaceid);
   const { documents, loadingDocuments, uploadDocument, deleteDocument } = useDocuments(spaceid);
 
   const handleSendMessage = async () => {
@@ -28,8 +28,9 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
       return;
     }
 
-    await sendMessage(input);
+    const messageToSend = input;
     setInput('');
+    await sendMessage(messageToSend);
   };
 
   const handleHoverPrompt = (prompt: string) => {
@@ -64,6 +65,8 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               <SpaceHeader
                 documentsCount={documents.length}
                 onOpenDocuments={() => setIsDialogOpen(true)}
+                onClearChat={clearMessages}
+                showClearChat={true}
               />
             </div>
             <MessageList messages={messages} loading={loading} />

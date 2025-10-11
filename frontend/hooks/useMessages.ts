@@ -46,5 +46,9 @@ export const useMessages = (spaceId: string) => {
     }
   };
 
-  return { messages, loading, sendMessage };
+  const clearMessages = () => {
+    setMessages([]);
+  };
+
+  return { messages, loading, sendMessage, clearMessages };
 };
