@@ -52,3 +52,16 @@ class DocumentsResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    picture: Optional[str] = None
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse

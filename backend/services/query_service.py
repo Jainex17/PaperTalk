@@ -39,7 +39,7 @@ class QueryService:
         self.ai_service = AIService()
         self.chat_history: Dict[str, List[Tuple[str, str]]] = {}
 
-    def process_query(self, space_id: str, query: str, is_first_message: bool = False) -> Dict[str, Any]:
+    def process_query(self, space_id: str, query: str, is_first_message: bool = False, user_id: str = None) -> Dict[str, Any]:
         if is_first_message:
             self.chat_history[space_id] = []
             logger.info(f"Cleared chat history for space: {space_id}")
@@ -47,13 +47,13 @@ class QueryService:
         query_type = classify_query(query)
 
         if query_type == QUERY_TYPE_ANALYZE_ALL:
-            result = self._process_analyze_all_query(space_id, query)
+            result = self._process_analyze_all_query(space_id, query, user_id)
         elif query_type == QUERY_TYPE_PREV_CONTEXT:
-            result = self._process_prev_context_query(space_id, query)
+            result = self._process_prev_context_query(space_id, query, user_id)
         elif query_type == QUERY_TYPE_CROSS_DOCUMENT:
-            result = self._process_cross_document_query(space_id, query)
+            result = self._process_cross_document_query(space_id, query, user_id)
         else:
-            result = self._process_specific_query(space_id, query)
+            result = self._process_specific_query(space_id, query, user_id)
 
         if space_id not in self.chat_history:
             self.chat_history[space_id] = []
@@ -64,10 +64,11 @@ class QueryService:
 
         return result
 
-    def _process_analyze_all_query(self, space_id: str, query: str) -> Dict[str, Any]:
+    def _process_analyze_all_query(self, space_id: str, query: str, user_id: str = None) -> Dict[str, Any]:
         relevant_chunks = get_all_chunks_from_space(
             space_id,
-            max_chunks=MAX_CHUNKS_ANALYZE_ALL
+            max_chunks=MAX_CHUNKS_ANALYZE_ALL,
+            user_id=user_id
         )
 
         if not relevant_chunks:
@@ -98,12 +99,12 @@ class QueryService:
             }
         }
 
-    def _process_prev_context_query(self, space_id: str, query: str) -> Dict[str, Any]:
+    def _process_prev_context_query(self, space_id: str, query: str, user_id: str = None) -> Dict[str, Any]:
         history = self.chat_history.get(space_id, [])
 
         if not history:
             logger.warning(f"No chat history found for space {space_id}, falling back to specific query")
-            return self._process_specific_query(space_id, query)
+            return self._process_specific_query(space_id, query, user_id)
 
         chat_history_text = ""
         for i, (user_msg, assistant_msg) in enumerate(history, 1):
@@ -129,12 +130,13 @@ class QueryService:
             }
         }
 
-    def _process_specific_query(self, space_id: str, query: str) -> Dict[str, Any]:
+    def _process_specific_query(self, space_id: str, query: str, user_id: str = None) -> Dict[str, Any]:
         expanded_query = expand_query(query)
         relevant_chunks = query_documents_hybrid(
             expanded_query,
             top_k=TOP_K_CHUNKS,
-            space_id=space_id
+            space_id=space_id,
+            user_id=user_id
         )
 
         if not relevant_chunks:
@@ -168,7 +170,7 @@ class QueryService:
             }
         }
 
-    def _process_cross_document_query(self, space_id: str, query: str) -> Dict[str, Any]:
+    def _process_cross_document_query(self, space_id: str, query: str, user_id: str = None) -> Dict[str, Any]:
         """
         Document-aware two-stage retrieval for cross-document queries:
         1. Retrieve initial relevant chunks using semantic search
@@ -179,7 +181,8 @@ class QueryService:
         source_chunks = query_documents_hybrid(
             query,
             top_k=10,
-            space_id=space_id
+            space_id=space_id,
+            user_id=user_id
         )
 
         if not source_chunks:
@@ -202,7 +205,8 @@ class QueryService:
         target_chunks = query_documents_hybrid(
             enhanced_query,
             top_k=TOP_K_CHUNKS,
-            space_id=space_id
+            space_id=space_id,
+            user_id=user_id
         )
 
         all_chunk_ids = set()

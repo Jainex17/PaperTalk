@@ -8,7 +8,7 @@ from sqlalchemy import func, cast, text
 from pgvector.sqlalchemy import Vector
 from google import genai
 
-from db_utils import get_db_session, Document, Spaces
+from db_utils import get_db_session, Document, Spaces, verify_space_access
 from constants import DEFAULT_SPACE_NAME, QUERY_TYPE_ANALYZE_ALL
 from config.config import settings
 from prompts import CLASSIFICATION_PROMPT_TEMPLATE
@@ -18,21 +18,28 @@ logger = logging.getLogger(__name__)
 embed_model = SentenceTransformer("all-mpnet-base-v2")
 genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
-def upload_document(chunks: List[str], space_id: str, filename: str = None) -> str:
+def upload_document(chunks: List[str], space_id: str, user_id: str, filename: str = None) -> str:
     file_id = str(uuid.uuid4())
 
     with get_db_session() as session:
         try:
-            space_exists = session.query(Spaces).filter_by(id=space_id).scalar()
-            if not space_exists:
+            # Check if space exists and belongs to user
+            space = session.query(Spaces).filter_by(id=space_id).first()
+
+            if not space:
+                # Create new space if it doesn't exist
                 new_space = Spaces(
                     id=space_id,
+                    user_id=user_id,
                     name=DEFAULT_SPACE_NAME,
                     created_at=datetime.now()
                 )
                 session.add(new_space)
                 session.commit()
-                logger.info(f"Created new space: {space_id}")
+                logger.info(f"Created new space: {space_id} for user {user_id}")
+            elif space.user_id != user_id:
+                # Space exists but doesn't belong to this user
+                raise ValueError(f"Unauthorized: Space {space_id} does not belong to user {user_id}")
 
             for i, chunk in enumerate(chunks):
                 embedding = embed_model.encode(chunk).tolist()
@@ -58,8 +65,14 @@ def upload_document(chunks: List[str], space_id: str, filename: str = None) -> s
 def query_documents_hybrid(
     query: str,
     top_k: int = 10,
-    space_id: str = "default"
+    space_id: str = "default",
+    user_id: str = None
 ) -> List[Dict[str, Any]]:
+    # Verify user has access to this space
+    if user_id:
+        has_access = verify_space_access(space_id, user_id)
+        if not has_access:
+            raise ValueError(f"Unauthorized: User {user_id} does not have access to space {space_id}")
     query_embedding = embed_model.encode([query])[0].tolist()
 
     with get_db_session() as session:
@@ -119,7 +132,14 @@ def expand_query(query: str) -> str:
     logger.debug(f"Expanded query from '{query}' to '{expanded}'")
     return expanded
 
-def get_all_chunks_from_space(space_id: str, max_chunks: int = 50) -> List[Dict[str, Any]]:
+def get_all_chunks_from_space(space_id: str, max_chunks: int = 50, user_id: str = None) -> List[Dict[str, Any]]:
+    # Verify user has access to this space
+    if user_id:
+        from db_utils import verify_space_access
+        has_access = verify_space_access(space_id, user_id)
+        if not has_access:
+            raise ValueError(f"Unauthorized: User {user_id} does not have access to space {space_id}")
+
     with get_db_session() as session:
         try:
             results = (

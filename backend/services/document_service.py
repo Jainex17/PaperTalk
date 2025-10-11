@@ -22,7 +22,8 @@ class DocumentService:
         self,
         file_content: bytes,
         filename: str,
-        space_id: str
+        space_id: str,
+        user_id: str
     ) -> Tuple[str, int]:
         temp_file_path = f"temp_{filename}"
 
@@ -36,7 +37,7 @@ class DocumentService:
 
             chunks = chunk_text(text)
 
-            file_id = upload_document(chunks, space_id, filename)
+            file_id = upload_document(chunks, space_id, user_id, filename)
 
             logger.info(f"Uploaded document {filename} with {len(chunks)} chunks to space {space_id}")
 
