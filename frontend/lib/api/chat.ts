@@ -1,5 +1,5 @@
-import { API_URL } from '../config';
 import { Source } from '@/types';
+import { authFetch } from './client';
 
 interface AskResponse {
   answer: string;
@@ -8,11 +8,8 @@ interface AskResponse {
 
 export const sendMessage = async (spaceId: string, query: string, isFirstMessage: boolean = false): Promise<AskResponse> => {
   try {
-    const response = await fetch(`${API_URL}/ask`, {
+    const response = await authFetch('/ask', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         space_id: spaceId,
         query,

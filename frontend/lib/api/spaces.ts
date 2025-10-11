@@ -1,9 +1,9 @@
-import { API_URL } from '../config';
 import { Space } from '@/types';
+import { authFetch } from './client';
 
 export const getSpaces = async (): Promise<Space[]> => {
   try {
-    const res = await fetch(`${API_URL}/spaces`, { cache: 'no-store' });
+    const res = await authFetch('/spaces', { cache: 'no-store' });
     if (!res.ok) throw new Error('Failed to fetch spaces');
     return await res.json();
   } catch (error) {
@@ -14,7 +14,7 @@ export const getSpaces = async (): Promise<Space[]> => {
 
 export const getSpace = async (spaceId: string): Promise<Space> => {
   try {
-    const res = await fetch(`${API_URL}/spaces/${spaceId}`, { cache: 'no-store' });
+    const res = await authFetch(`/spaces/${spaceId}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Failed to fetch space');
     return await res.json();
   } catch (error) {
@@ -25,11 +25,8 @@ export const getSpace = async (spaceId: string): Promise<Space> => {
 
 export const updateSpaceName = async (spaceId: string, newName: string): Promise<Space> => {
   try {
-    const response = await fetch(`${API_URL}/spaces/${spaceId}`, {
+    const response = await authFetch(`/spaces/${spaceId}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         new_name: newName,
       }),

@@ -11,7 +11,22 @@ from config.config import settings
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = settings.DATABASE_URL
-engine = create_engine(DATABASE_URL)
+
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    connect_args={
+        "connect_timeout": 10,
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+    }
+)
+
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -24,9 +39,18 @@ def get_db_session():
     finally:
         session.close()
 
+class Users(Base):
+    __tablename__ = "users"
+    id = Column(String, primary_key=True)
+    email = Column(String, unique=True, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    picture = Column(String, nullable=True)
+    created_at = Column(DateTime, nullable=False)
+
 class Spaces(Base):
     __tablename__ = "spaces"
     id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey('users.id'), nullable=False)
     name = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False)
 
@@ -42,10 +66,10 @@ class Document(Base):
 
 Base.metadata.create_all(engine)
 
-def get_all_spaces() -> List[Dict[str, str]]:
+def get_all_spaces(user_id: str) -> List[Dict[str, str]]:
     with get_db_session() as session:
         try:
-            result = session.query(Spaces).distinct().all()
+            result = session.query(Spaces).where(Spaces.user_id == user_id).distinct().all()
 
             spaces = [
                 {
@@ -63,9 +87,19 @@ def get_all_spaces() -> List[Dict[str, str]]:
             logger.error(f"Error retrieving spaces: {str(e)}", exc_info=True)
             raise
 
-def get_documents_by_space(space_id: str) -> List[str]:
+def get_documents_by_space(space_id: str, user_id: str) -> List[str]:
     with get_db_session() as session:
         try:
+            # First verify the space belongs to the user
+            space = session.query(Spaces).filter(
+                Spaces.id == space_id,
+                Spaces.user_id == user_id
+            ).first()
+
+            if not space:
+                logger.warning(f"Space not found or unauthorized: {space_id} for user {user_id}")
+                return []
+
             result = session.query(Document.original_file_id).filter(
                 Document.space_id == space_id
             ).distinct().all()
@@ -78,13 +112,16 @@ def get_documents_by_space(space_id: str) -> List[str]:
             logger.error(f"Error retrieving documents for space {space_id}: {str(e)}", exc_info=True)
             raise
 
-def update_space_name(space_id: str, new_name: str) -> bool:
+def update_space_name(space_id: str, new_name: str, user_id: str) -> bool:
     with get_db_session() as session:
         try:
-            space = session.query(Spaces).filter(Spaces.id == space_id).first()
+            space = session.query(Spaces).filter(
+                Spaces.id == space_id,
+                Spaces.user_id == user_id
+            ).first()
 
             if not space:
-                logger.warning(f"Space not found: {space_id}")
+                logger.warning(f"Space not found or unauthorized: {space_id} for user {user_id}")
                 return False
 
             space.name = new_name
@@ -97,18 +134,29 @@ def update_space_name(space_id: str, new_name: str) -> bool:
             session.rollback()
             raise
 
-def delete_document(space_id: str, original_file_id: str) -> int:
+def delete_document(space_id: str, original_file_id: str, user_id: str) -> int:
     """Delete all chunks of a document from a specific space.
 
     Args:
         space_id: The space ID containing the document
         original_file_id: The original file ID to delete
+        user_id: The user ID who owns the space
 
     Returns:
         Number of chunks deleted
     """
     with get_db_session() as session:
         try:
+            # First verify the space belongs to the user
+            space = session.query(Spaces).filter(
+                Spaces.id == space_id,
+                Spaces.user_id == user_id
+            ).first()
+
+            if not space:
+                logger.warning(f"Space not found or unauthorized: {space_id} for user {user_id}")
+                return 0
+
             deleted_count = session.query(Document).filter(
                 Document.space_id == space_id,
                 Document.original_file_id == original_file_id
@@ -120,5 +168,83 @@ def delete_document(space_id: str, original_file_id: str) -> int:
 
         except Exception as e:
             logger.error(f"Error deleting document {original_file_id} from space {space_id}: {str(e)}", exc_info=True)
+            session.rollback()
+            raise
+
+def verify_space_access(space_id: str, user_id: str) -> bool:
+    """Verify that a user has access to a specific space.
+
+    Args:
+        space_id: The space ID to check
+        user_id: The user ID to verify
+
+    Returns:
+        True if user owns the space, False otherwise
+    """
+    with get_db_session() as session:
+        try:
+            space = session.query(Spaces).filter(
+                Spaces.id == space_id,
+                Spaces.user_id == user_id
+            ).first()
+
+            if not space:
+                logger.warning(f"Space access denied: {space_id} for user {user_id}")
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error verifying space access: {str(e)}", exc_info=True)
+            raise
+
+
+def get_user_by_email(email: str) -> Optional[Dict]:
+    """Get user by email address.
+    """
+    with get_db_session() as session:
+        try:
+            user = session.query(Users).filter(Users.email == email).first()
+            if not user:
+                return None
+
+            return {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "picture": user.picture,
+                "created_at": user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at)
+            }
+        except Exception as e:
+            logger.error(f"Error getting user by email {email}: {str(e)}", exc_info=True)
+            raise
+
+def create_user(user_id: str, email: str, name: str, picture: Optional[str] = None) -> Dict:
+    """Create a new user.
+    """
+    from datetime import datetime, timezone
+
+    with get_db_session() as session:
+        try:
+            new_user = Users(
+                id=user_id,
+                email=email,
+                name=name,
+                picture=picture,
+                created_at=datetime.now(timezone.utc)
+            )
+            session.add(new_user)
+            session.commit()
+
+            logger.info(f"Created new user: {email}")
+            return {
+                "id": new_user.id,
+                "email": new_user.email,
+                "name": new_user.name,
+                "picture": new_user.picture,
+                "created_at": new_user.created_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error creating user {email}: {str(e)}", exc_info=True)
             session.rollback()
             raise

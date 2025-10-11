@@ -1,8 +1,12 @@
 import logging
 from typing import List
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, status
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, status, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from config.config import settings
 from models import (
@@ -17,6 +21,8 @@ from models import (
 from services.query_service import QueryService
 from services.document_service import DocumentService
 from db_utils import get_all_spaces, get_documents_by_space, update_space_name, delete_document
+from routers import auth
+from auth_utils import get_current_user
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,10 +30,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="PaperTalk",
     description="Document analysis and Q&A system",
     version="1.0.0"
+)
+
+# Add rate limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.JWT_SECRET_KEY
 )
 
 app.add_middleware(
@@ -38,8 +56,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
+
 query_service = QueryService()
 document_service = DocumentService()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup resources on shutdown."""
+    from services.auth_service import httpx_client
+    await httpx_client.aclose()
+    logger.info("Closed httpx client")
 
 
 @app.get("/", tags=["Health"])
@@ -48,9 +76,15 @@ def health_check() -> dict:
 
 
 @app.post("/ask", response_model=AskResponse, tags=["Query"])
-def ask_question(body: AskRequest) -> AskResponse:
+@limiter.limit("30/minute")  # 30 requests per minute per IP
+async def ask_question(
+    request: Request,
+    body: AskRequest,
+    current_user: dict = Depends(get_current_user)
+) -> AskResponse:
     try:
-        result = query_service.process_query(body.space_id, body.query, body.is_first_message)
+        user_id = current_user["user_id"]
+        result = query_service.process_query(body.space_id, body.query, body.is_first_message, user_id)
         return AskResponse(**result)
 
     except ValueError as e:
@@ -69,18 +103,23 @@ def ask_question(body: AskRequest) -> AskResponse:
 
 
 @app.post("/uploadpdf", response_model=UploadResponse, tags=["Documents"])
-def upload_document(
+@limiter.limit("10/minute")  # 10 uploads per minute per IP
+async def upload_document(
+    request: Request,
     space_id: str = Form(...),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
 ) -> UploadResponse:
     try:
+        user_id = current_user["user_id"]
         document_service.validate_file(file.filename, file.size)
 
         file_content = file.file.read()
         file_id, chunk_count = document_service.process_document(
             file_content,
             file.filename,
-            space_id
+            space_id,
+            user_id
         )
 
         return UploadResponse(fileid=file_id, chunk_count=chunk_count)
@@ -101,9 +140,11 @@ def upload_document(
 
 
 @app.get("/spaces", response_model=List[SpaceResponse], tags=["Spaces"])
-def list_spaces() -> List[SpaceResponse]:
+@limiter.limit("60/minute")  # 60 requests per minute per IP
+async def list_spaces(request: Request, current_user: dict = Depends(get_current_user)) -> List[SpaceResponse]:
     try:
-        spaces = get_all_spaces()
+        user_id = current_user["user_id"]
+        spaces = get_all_spaces(user_id)
         return [SpaceResponse(**space) for space in spaces]
 
     except Exception as e:
@@ -115,9 +156,15 @@ def list_spaces() -> List[SpaceResponse]:
 
 
 @app.get("/getdocuments/{space_id}", response_model=DocumentsResponse, tags=["Documents"])
-def list_documents(space_id: str) -> DocumentsResponse:
+@limiter.limit("60/minute")  # 60 requests per minute per IP
+async def list_documents(
+    request: Request,
+    space_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> DocumentsResponse:
     try:
-        documents = get_documents_by_space(space_id)
+        user_id = current_user["user_id"]
+        documents = get_documents_by_space(space_id, user_id)
         return DocumentsResponse(documents=documents)
 
     except Exception as e:
@@ -129,9 +176,16 @@ def list_documents(space_id: str) -> DocumentsResponse:
 
 
 @app.patch("/spaces/{space_id}", response_model=MessageResponse, tags=["Spaces"])
-def rename_space(space_id: str, body: RenameSpaceRequest) -> MessageResponse:
+@limiter.limit("30/minute")  # 30 requests per minute per IP
+async def rename_space(
+    request: Request,
+    space_id: str,
+    body: RenameSpaceRequest,
+    current_user: dict = Depends(get_current_user)
+) -> MessageResponse:
     try:
-        success = update_space_name(space_id, body.new_name)
+        user_id = current_user["user_id"]
+        success = update_space_name(space_id, body.new_name, user_id)
 
         if not success:
             raise HTTPException(
@@ -153,9 +207,16 @@ def rename_space(space_id: str, body: RenameSpaceRequest) -> MessageResponse:
 
 
 @app.delete("/documents/{space_id}/{file_id}", response_model=MessageResponse, tags=["Documents"])
-def delete_document_endpoint(space_id: str, file_id: str) -> MessageResponse:
+@limiter.limit("30/minute")  # 30 requests per minute per IP
+async def delete_document_endpoint(
+    request: Request,
+    space_id: str,
+    file_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> MessageResponse:
     try:
-        deleted_count = delete_document(space_id, file_id)
+        user_id = current_user["user_id"]
+        deleted_count = delete_document(space_id, file_id, user_id)
 
         if deleted_count == 0:
             raise HTTPException(

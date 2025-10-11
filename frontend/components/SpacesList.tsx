@@ -8,6 +8,7 @@ import logo from '@/assets/logo.png';
 import { SpaceCard } from './space/SpaceCard';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
 import { Space } from '@/types';
+import { UserProfile } from './UserProfile';
 
 export function SpacesList() {
   const [isLoading, setIsLoading] = useState(true);
@@ -36,6 +37,9 @@ export function SpacesList() {
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="flex justify-end mb-4">
+          <UserProfile />
+        </div>
         <div className="text-left mb-12 mt-12">
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-5xl flex items-center gap-4 font-normal text-foreground font-serif">

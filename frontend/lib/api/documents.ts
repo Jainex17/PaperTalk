@@ -1,8 +1,9 @@
+import { authFetch, getAuthHeaders } from './client';
 import { API_URL } from '../config';
 
 export const getDocuments = async (spaceId: string): Promise<string[]> => {
   try {
-    const response = await fetch(`${API_URL}/getdocuments/${spaceId}`);
+    const response = await authFetch(`/getdocuments/${spaceId}`);
     if (!response.ok) {
       throw new Error('Failed to fetch documents');
     }
@@ -20,8 +21,11 @@ export const uploadDocument = async (spaceId: string, file: File): Promise<{ mes
     formData.append('space_id', spaceId);
     formData.append('file', file);
 
+    const headers: HeadersInit = getAuthHeaders();
+
     const response = await fetch(`${API_URL}/uploadpdf`, {
       method: 'POST',
+      headers,
       body: formData,
     });
 
@@ -38,7 +42,7 @@ export const uploadDocument = async (spaceId: string, file: File): Promise<{ mes
 
 export const deleteDocument = async (spaceId: string, fileId: string): Promise<{ message: string }> => {
   try {
-    const response = await fetch(`${API_URL}/documents/${spaceId}/${encodeURIComponent(fileId)}`, {
+    const response = await authFetch(`/documents/${spaceId}/${encodeURIComponent(fileId)}`, {
       method: 'DELETE',
     });
 
