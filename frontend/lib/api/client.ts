@@ -34,6 +34,10 @@ export function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
+export function getAuthToken(): string | null {
+  return getCookie('auth_token');
+}
+
 /**
  * Authenticated fetch wrapper
  */

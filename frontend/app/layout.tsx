@@ -15,6 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link href="https://api.fontshare.com/v2/css?f[]=bespoke-serif@300,301,400,401,500,501,700,701,800&display=swap" rel="stylesheet" />
+      </head>
       <body
         className={`dark`}
       >

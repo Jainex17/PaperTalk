@@ -63,6 +63,7 @@ class Document(Base):
     space_id = Column(String, ForeignKey('spaces.id'), nullable=False)
     text = Column(Text, nullable=False)
     embedding = Column(Vector(768), nullable=False)
+    created_at = Column(DateTime, nullable=False)
 
 Base.metadata.create_all(engine)
 

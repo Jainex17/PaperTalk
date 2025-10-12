@@ -1,4 +1,4 @@
-import { authFetch, getAuthHeaders } from './client';
+import { authFetch, getAuthToken } from './client';
 import { API_URL } from '../config';
 
 export const getDocuments = async (spaceId: string): Promise<string[]> => {
@@ -21,12 +21,18 @@ export const uploadDocument = async (spaceId: string, file: File): Promise<{ mes
     formData.append('space_id', spaceId);
     formData.append('file', file);
 
-    const headers: HeadersInit = getAuthHeaders();
+    const token = getAuthToken();
+    const headers: HeadersInit = {};
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     const response = await fetch(`${API_URL}/uploadpdf`, {
       method: 'POST',
       headers,
       body: formData,
+      credentials: 'include',
     });
 
     if (!response.ok) {
