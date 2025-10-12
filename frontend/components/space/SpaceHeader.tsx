@@ -35,19 +35,27 @@ export function SpaceHeader({ documentsCount, onOpenDocuments, onClearChat, show
               type="text"
               value={tempSpaceName}
               onChange={(e) => setTempSpaceName(e.target.value)}
-              onBlur={saveSpaceName}
+              onBlur={() => {
+                saveSpaceName();
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  saveSpaceName();
+                  e.preventDefault();
+                  e.currentTarget.blur();
                 } else if (e.key === 'Escape') {
+                  e.preventDefault();
                   cancelEdit();
                 }
               }}
               autoFocus
-              className="text-xl font-semibold font-serif outline-none border-b border-primary bg-transparent"
+              className="text-xl font-semibold font-serif outline-none border-b-2 border-primary bg-transparent px-2 py-1"
             />
           ) : (
-            <h1 className="text-xl font-semibold font-serif" onClick={() => setEditSpaceName(true)}>
+            <h1
+              className="text-xl font-semibold font-serif cursor-pointer px-2 py-1 border-b-2 border-transparent hover:border-muted-foreground transition-all"
+              onClick={() => setEditSpaceName(true)}
+              title="Click to edit space name"
+            >
               {currentSpace ? currentSpace.name : 'New Space'}
             </h1>
           )}

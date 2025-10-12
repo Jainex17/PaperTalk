@@ -29,8 +29,8 @@ export default function Navbar() {
         <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
           Features
         </Link>
-        <Link href="#community" className="text-muted-foreground hover:text-foreground transition-colors">
-          Community
+        <Link href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+          Pricing
         </Link>
       </div>
 
@@ -40,12 +40,6 @@ export default function Navbar() {
           className="px-6 py-2 text-sm text-foreground hover:text-muted-foreground transition-colors"
         >
           Sign In
-        </Link>
-        <Link
-          href="/spaces"
-          className="px-6 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          Start For Free
         </Link>
       </div>
     </nav>

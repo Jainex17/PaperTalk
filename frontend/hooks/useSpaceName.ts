@@ -14,19 +14,32 @@ export const useSpaceName = () => {
   }, [currentSpace]);
 
   const saveSpaceName = async () => {
-    if (tempSpaceName.trim() === '' || !currentSpace) {
+    if (!currentSpace) {
+      return;
+    }
+
+    // If name is empty, cancel edit
+    if (tempSpaceName.trim() === '') {
+      cancelEdit();
+      return;
+    }
+
+    // If name hasn't changed, just exit edit mode
+    if (tempSpaceName.trim() === currentSpace.name.trim()) {
+      setEditSpaceName(false);
       return;
     }
 
     // Store the previous name for rollback
     const previousName = currentSpace.name;
+    const newName = tempSpaceName.trim();
 
     // Optimistically update the UI
-    setCurrentSpace({ ...currentSpace, name: tempSpaceName });
+    setCurrentSpace({ ...currentSpace, name: newName });
     setEditSpaceName(false);
 
     try {
-      await updateSpaceNameAPI(currentSpace.id, tempSpaceName);
+      await updateSpaceNameAPI(currentSpace.id, newName);
       // Success - name is already updated
     } catch (error) {
       console.error('Error saving space name:', error);
