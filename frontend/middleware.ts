@@ -7,17 +7,10 @@ export function middleware(request: NextRequest) {
 
   // Define public routes that don't require authentication
   const publicRoutes = ['/login', '/auth/callback', '/auth/error'];
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  const isPublicRoute = pathname === '/' || publicRoutes.some(route => pathname.startsWith(route));
 
-  // If user is not authenticated and trying to access a protected route
   if (!token && !isPublicRoute) {
-    const loginUrl = new URL('/login', request.url);
-    // Store the original URL to redirect back after login, only if it's a safe internal path
-    const isSafePath = pathname.startsWith('/') && !pathname.startsWith('//') && !pathname.startsWith('/\\');
-    if (isSafePath && !publicRoutes.some(route => pathname.startsWith(route))) {
-      loginUrl.searchParams.set('from', pathname);
-    }
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   if (token && pathname === '/login') {
