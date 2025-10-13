@@ -32,7 +32,7 @@ ANSWER:"""
 
 CLASSIFICATION_PROMPT_TEMPLATE = """Analyze the user's query and classify it into ONE of these categories:
 
-1. "specific" - User wants specific information (e.g., "What did the paper say about X?", "Explain concept Y", "Who are the authors?")
+1. "specific" - User wants specific information from a single document (e.g., "What did the paper say about X?", "Explain concept Y", "Who are the authors?")
 2. "analyze_all" - User wants comprehensive analysis/summary of all documents (e.g., "Summarize everything", "What are the main findings?", "List key points", "Give me an overview")
 3. "prev_context" - User is referring to previous response or asking for modification of previous answer. Look for:
    - Reformatting requests: "make it shorter", "summarize this", "show in table", "make it longer"
@@ -40,11 +40,15 @@ CLASSIFICATION_PROMPT_TEMPLATE = """Analyze the user's query and classify it int
    - Continuation: "what else", "tell me more", "continue"
    - Simple acknowledgments: "thanks", "ok", "got it"
    - Pronouns referring to previous content: "summarize it", "explain that", "rewrite this"
-4. "cross_document" - User wants to connect/apply information from one document to information in another document. Look for:
-   - "Based on [document A], guide me using [document B]"
-   - "Using information from [document A], suggest steps from [document B]"
-   - "Apply insights from [doc A] to content in [doc B]"
-   - "According to [doc A], what does [doc B] recommend?"
+4. "cross_document" - User wants to connect/apply information from multiple documents. Look for:
+   - Questions about a person/entity that require combining their info with advice/content from other documents
+   - "Based on [document A], what should [person] do according to [document B]"
+   - "Using [person's] background, suggest [advice/path] from [other document]"
+   - Queries mentioning specific people/entities that need context from multiple sources
+   - "What skills does [person] have?" when person info is in one doc but query context suggests cross-reference
+   - Questions that implicitly need information from one document to properly answer using another
+
+IMPORTANT: If the query mentions a specific person, entity, or situation that likely requires information from multiple documents to answer properly, classify as "cross_document".
 
 User's query: "{query}"
 
@@ -95,6 +99,12 @@ SOURCE DOCUMENT CHUNKS:
 ORIGINAL USER QUERY: {original_query}
 
 TASK: Extract the most important information from the source document that will help answer the user's query.
-Focus on key facts, attributes, themes, or context that can be used to search the target document.
+Focus on:
+- Person names, backgrounds, skills, experience, and attributes
+- Key facts, themes, or context mentioned in the query
+- Specific details that would help find relevant advice or information in other documents
+- Professional background, education, or expertise areas
+
+Be specific and include person names and their key characteristics.
 
 EXTRACTED KEY INFORMATION:"""

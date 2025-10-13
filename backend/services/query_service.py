@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Dict, Any, List, Tuple
 
 from services.context_builder import ContextBuilder
@@ -33,6 +34,10 @@ logger = logging.getLogger(__name__)
 
 
 class QueryService:
+    COMMON_WORDS = {
+        'The', 'This', 'That', 'What', 'Where', 'When', 'How', 'Why',
+        'Based', 'According', 'Source', 'Does', 'Should', 'Can', 'Will'
+    }
 
     def __init__(self):
         self.context_builder = ContextBuilder()
@@ -63,6 +68,42 @@ class QueryService:
             self.chat_history[space_id] = self.chat_history[space_id][-10:]
 
         return result
+    
+    def _enhance_query_with_context(self, space_id: str, query: str) -> str:
+        """Enhance query by providing entities as a context note, not altering original query semantics"""
+        if space_id not in self.chat_history or not self.chat_history[space_id]:
+            return query
+
+        # Extract entities mentioned in recent chat history
+        recent_history = self.chat_history[space_id][-3:]  # Last 3 exchanges
+        entities = set()
+
+        for prev_query, prev_answer in recent_history:
+            # Simple entity extraction - look for capitalized names
+            query_entities = re.findall(r'\b[A-Z][a-z]+\b', prev_query)
+            answer_entities = re.findall(r'\b[A-Z][a-z]+\b', prev_answer)
+            entities.update(query_entities + answer_entities)
+
+        # Remove common words that aren't entities
+        entities = entities - self.COMMON_WORDS
+
+        if entities:
+            entity_context = ", ".join(sorted(entities))
+            enhanced_query = (
+                f"{query}\n\n[Context Note: Related entities from previous discussion: {entity_context}]"
+            )
+            logger.info(f"Enhanced query with context note for entities: {entity_context}")
+            return enhanced_query
+
+        return query
+    
+    def _query_mentions_entities(self, query: str) -> bool:
+        """Check if query mentions specific entities (names, people)"""
+        # Look for capitalized names that could be entities
+        entities = re.findall(r'\b[A-Z][a-z]+\b', query)
+        actual_entities = [e for e in entities if e not in self.COMMON_WORDS]
+        return len(actual_entities) > 0
+        return len(actual_entities) > 0
 
     def _process_analyze_all_query(self, space_id: str, query: str, user_id: str = None) -> Dict[str, Any]:
         relevant_chunks = get_all_chunks_from_space(
@@ -131,7 +172,10 @@ class QueryService:
         }
 
     def _process_specific_query(self, space_id: str, query: str, user_id: str = None) -> Dict[str, Any]:
-        expanded_query = expand_query(query)
+        # Enhance query with chat history context for entity recognition
+        enhanced_query = self._enhance_query_with_context(space_id, query)
+        expanded_query = expand_query(enhanced_query)
+        
         relevant_chunks = query_documents_hybrid(
             expanded_query,
             top_k=TOP_K_CHUNKS,
@@ -140,7 +184,9 @@ class QueryService:
         )
 
         if not relevant_chunks:
-            raise ValueError("No relevant information found.")
+            # Fallback: Try as cross-document query if no specific results found
+            logger.info("No specific results found, trying cross-document approach")
+            return self._process_cross_document_query(space_id, query, user_id)
 
         relevant_chunks = relevant_chunks[:MAX_RELEVANT_CHUNKS]
 
@@ -149,6 +195,12 @@ class QueryService:
             MAX_CONTEXT_TOKENS_SPECIFIC,
             DISTANCE_THRESHOLD
         )
+        
+        # Check if we have multi-document coverage, if not and query mentions entities, try cross-document
+        unique_filenames = set(chunk.get('filename', 'N/A') for chunk in relevant_chunks)
+        if len(unique_filenames) == 1 and self._query_mentions_entities(query):
+            logger.info("Single document result for entity query, trying cross-document approach")
+            return self._process_cross_document_query(space_id, query, user_id)
 
         prompt = SPECIFIC_QUERY_PROMPT_TEMPLATE.format(
             context=context,
@@ -209,17 +261,27 @@ class QueryService:
             user_id=user_id
         )
 
-        all_chunk_ids = set()
+        # Use filename-based deduplication to ensure multi-document representation
+        seen_filenames = set()
         combined_chunks = []
-
-        for chunk in source_chunks[:5]:
-            if chunk['doc_id'] not in all_chunk_ids:
-                all_chunk_ids.add(chunk['doc_id'])
+        
+        # First, add chunks from different documents (prioritize diversity)
+        all_chunks = source_chunks[:8] + target_chunks[:8]
+        
+        # Sort by distance to get best chunks first
+        all_chunks.sort(key=lambda x: x.get('distance', 999))
+        
+        for chunk in all_chunks:
+            filename = chunk.get('filename', 'unknown')
+            if filename not in seen_filenames:
+                seen_filenames.add(filename)
                 combined_chunks.append(chunk)
-
-        for chunk in target_chunks[:5]:
-            if chunk['doc_id'] not in all_chunk_ids:
-                all_chunk_ids.add(chunk['doc_id'])
+                
+        # Then add additional chunks from already seen documents if we have space
+        for chunk in all_chunks:
+            if len(combined_chunks) >= 10:  # Limit total chunks
+                break
+            if chunk not in combined_chunks:
                 combined_chunks.append(chunk)
 
         context, sources, current_tokens = self.context_builder.build_context_for_specific_query(

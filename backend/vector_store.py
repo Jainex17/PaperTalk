@@ -180,7 +180,7 @@ def classify_query(query: str) -> str:
             model="gemini-2.0-flash-exp",
             contents=classification_prompt,
             config={
-                "temperature": 0.1,
+                "temperature": 0.05,
                 "max_output_tokens": 10,
             }
         )
