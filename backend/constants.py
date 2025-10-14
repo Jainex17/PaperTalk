@@ -13,6 +13,7 @@ CHUNK_OVERLAP = 100
 MAX_FILE_SIZE_MB = 5
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 MAX_PDF_PAGES = 25
+MAX_TEXT_CHARACTERS = 50000  # Max characters for pasted text (roughly equivalent to 5MB text file)
 ALLOWED_FILE_EXTENSIONS = ('.pdf', '.txt')
 
 GEMINI_MODEL = "gemini-2.0-flash"

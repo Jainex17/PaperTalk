@@ -15,7 +15,7 @@ export default function Home() {
           </h1>
 
           <p className="text-xl text-muted-foreground mb-8 leading-relaxed max-w-6xl mx-auto">
-            From legal agreements to financial reports, PDF.ai brings your documents to life. You can ask questions, get summaries, find information, and more.
+            From legal agreements to financial reports, PaperTalk brings your documents to life. You can ask questions, get summaries, find information, and more.
           </p>
 
           <div className="mb-16">

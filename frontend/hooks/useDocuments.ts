@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Document } from '@/types';
-import { getDocuments as getDocumentsAPI, uploadDocument as uploadDocumentAPI, deleteDocument as deleteDocumentAPI } from '@/lib/api/documents';
+import { getDocuments as getDocumentsAPI, uploadDocument as uploadDocumentAPI, uploadText as uploadTextAPI, deleteDocument as deleteDocumentAPI } from '@/lib/api/documents';
 import { getFileType } from '@/lib/utils';
 
 export const useDocuments = (spaceId: string) => {
@@ -56,6 +56,37 @@ export const useDocuments = (spaceId: string) => {
     }
   };
 
+  const uploadText = async (textContent: string) => {
+    // Generate a temporary name from first few words
+    const tempName = textContent.trim().substring(0, 30).replace(/\s+/g, '_') + '.txt';
+
+    const newDoc: Document = {
+      name: tempName,
+      uploadedAt: new Date(),
+      type: 'text',
+      isUploading: true
+    };
+
+    setDocuments(prev => [...prev, newDoc]);
+
+    try {
+      const result = await uploadTextAPI(spaceId, textContent);
+      const finalFilename = result.filename || result.fileid;
+
+      setDocuments(prev =>
+        prev.map(doc =>
+          doc.name === tempName
+            ? { ...doc, id: result.fileid, name: finalFilename, isUploading: false }
+            : doc
+        )
+      );
+    } catch (error) {
+      console.error('Text upload error:', error);
+      setDocuments(prev => prev.filter(doc => doc.name !== tempName));
+      throw error;
+    }
+  };
+
   const deleteDocument = async (documentId: string) => {
     try {
       await deleteDocumentAPI(spaceId, documentId);
@@ -66,5 +97,5 @@ export const useDocuments = (spaceId: string) => {
     }
   };
 
-  return { documents, loadingDocuments, uploadDocument, deleteDocument, refetch: fetchDocuments };
+  return { documents, loadingDocuments, uploadDocument, uploadText, deleteDocument, refetch: fetchDocuments };
 };

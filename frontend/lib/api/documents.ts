@@ -28,7 +28,7 @@ export const uploadDocument = async (spaceId: string, file: File): Promise<{ mes
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_URL}/uploadpdf`, {
+    const response = await fetch(`${API_URL}/documents/upload`, {
       method: 'POST',
       headers,
       body: formData,
@@ -42,6 +42,38 @@ export const uploadDocument = async (spaceId: string, file: File): Promise<{ mes
     return await response.json();
   } catch (error) {
     console.error('Upload error:', error);
+    throw error;
+  }
+};
+
+export const uploadText = async (spaceId: string, textContent: string): Promise<{ fileid: string; chunk_count: number; filename?: string }> => {
+  try {
+    const formData = new FormData();
+    formData.append('space_id', spaceId);
+    formData.append('text_content', textContent);
+
+    const token = getAuthToken();
+    const headers: HeadersInit = {};
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_URL}/documents/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: 'Upload failed' }));
+      throw new Error(errorData.detail || 'Upload failed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Text upload error:', error);
     throw error;
   }
 };

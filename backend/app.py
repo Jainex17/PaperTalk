@@ -102,16 +102,31 @@ async def ask_question(
         )
 
 
-@app.post("/uploadpdf", response_model=UploadResponse, tags=["Documents"])
+@app.post("/documents/upload", response_model=UploadResponse, tags=["Documents"])
 @limiter.limit("10/minute")  # 10 uploads per minute per IP
 async def upload_document(
     request: Request,
     space_id: str = Form(...),
-    file: UploadFile = File(...),
+    file: UploadFile = File(None),
+    text_content: str = Form(None),
     current_user: dict = Depends(get_current_user)
 ) -> UploadResponse:
     try:
         user_id = current_user["user_id"]
+
+        # Handle text content upload
+        if text_content:
+            file_id, chunk_count, filename = document_service.process_text_content(
+                text_content,
+                space_id,
+                user_id
+            )
+            return UploadResponse(fileid=file_id, chunk_count=chunk_count, filename=filename)
+
+        # Handle file upload
+        if not file:
+            raise ValueError("Either file or text_content must be provided")
+
         document_service.validate_file(file.filename, file.size)
 
         file_content = file.file.read()
@@ -122,7 +137,7 @@ async def upload_document(
             user_id
         )
 
-        return UploadResponse(fileid=file_id, chunk_count=chunk_count)
+        return UploadResponse(fileid=file_id, chunk_count=chunk_count, filename=file.filename)
 
     except ValueError as e:
         logger.warning(f"Invalid file upload: {str(e)}")

@@ -50,7 +50,7 @@ export function ConfirmDialog({
                   <h3 className="text-lg font-semibold text-foreground mb-2">
                     {title}
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-6">
+                  <p className="text-sm text-muted-foreground mb-6 break-words">
                     {message}
                   </p>
                   <div className="flex gap-3 justify-end">

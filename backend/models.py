@@ -38,6 +38,7 @@ class ErrorResponse(BaseModel):
 class UploadResponse(BaseModel):
     fileid: str
     chunk_count: int
+    filename: Optional[str] = None
 
 
 class SpaceResponse(BaseModel):
