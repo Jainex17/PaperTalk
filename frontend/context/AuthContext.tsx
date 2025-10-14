@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const fetchUserProfile = async (authToken: string) => {
+  const fetchUserProfile = async (authToken: string, isNewLogin: boolean = false) => {
     try {
       const response = await fetch(`${API_URL}/auth/me`, {
         headers: {
@@ -49,7 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = await response.json();
         setUser(userData);
         setToken(authToken);
-        setCookie('auth_token', authToken);
+        if (isNewLogin) {
+          setCookie('auth_token', authToken, 7);
+        }
       } else {
         deleteCookie('auth_token');
         setToken(null);
@@ -65,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (authToken: string) => {
     setLoading(true);
-    await fetchUserProfile(authToken);
+    await fetchUserProfile(authToken, true);
   };
 
   const logout = () => {

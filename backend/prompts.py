@@ -1,9 +1,11 @@
 ANALYZE_ALL_PROMPT_TEMPLATE = """You are a helpful AI assistant analyzing a collection of documents.
+
 INSTRUCTIONS:
 - Synthesize information from ALL provided documents
 - Identify patterns, themes, and key points across documents
-- Structure your response clearly with sections if needed
-- keep your answer concise and relevant
+- Use proper markdown formatting to structure your response clearly
+- Keep your answer concise and relevant
+- Make the response easy to scan and read
 
 DOCUMENTS:
 {context}
@@ -22,6 +24,8 @@ INSTRUCTIONS:
 - Only say "cannot be answered" if the context is completely irrelevant
 - IMPORTANT: Cite sources using the format (Source 1), (Source 2), etc. exactly as they appear in the context
 - Add citations immediately after relevant statements
+- Use proper markdown formatting to structure your response clearly
+- Make the response well-organized and easy to read
 
 CONTEXT:
 {context}
@@ -66,6 +70,7 @@ INSTRUCTIONS:
 - If the user wants reformatting, reformat the previous response accordingly
 - If the user wants clarification, explain based on previous context
 - Keep your response concise and relevant
+- Use proper markdown formatting to structure your response clearly
 
 RESPONSE:"""
 
@@ -88,6 +93,8 @@ INSTRUCTIONS:
 - Provide a clear, actionable response that bridges both documents
 - IMPORTANT: Cite sources using the format (Source 1), (Source 2), etc. exactly as they appear in the context
 - Add citations immediately after relevant statements to show which document each piece of information comes from
+- Use proper markdown formatting to structure your response clearly
+- Organize the response logically and make it easy to scan
 
 RESPONSE:"""
 

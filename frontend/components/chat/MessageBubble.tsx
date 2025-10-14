@@ -3,13 +3,43 @@
 import { Message, Source } from '@/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
+import { CitationCard } from './CitationCard';
+import { CitationModal } from './CitationModal';
 
 interface MessageBubbleProps {
   message: Message;
 }
 
 export function MessageBubble({ message }: MessageBubbleProps) {
+  const [selectedSources, setSelectedSources] = useState<Source[]>([]);
+  const [selectedFilename, setSelectedFilename] = useState<string>('');
+  const [selectedCitationNumber, setSelectedCitationNumber] = useState<number>(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Group sources by filename
+  const groupSourcesByFilename = (sources: Source[]) => {
+    const grouped = new Map<string, Source[]>();
+    sources.forEach((source) => {
+      const existing = grouped.get(source.filename) || [];
+      grouped.set(source.filename, [...existing, source]);
+    });
+    return Array.from(grouped.entries()).map(([filename, sources], index) => ({
+      filename,
+      sources,
+      index: index + 1,
+      // Use the highest relevance score
+      relevance_score: sources.reduce((max, s) => Math.max(max, typeof s.relevance_score === 'number' ? s.relevance_score : 0), 0)
+    }));
+  };
+
+  const handleViewFullText = (filename: string, sources: Source[], index: number) => {
+    setSelectedFilename(filename);
+    setSelectedSources(sources);
+    setSelectedCitationNumber(index);
+    setIsModalOpen(true);
+  };
+
   const markdownComponents = {
     h1: ({ ...props }) => <h1 className="text-2xl font-bold mt-4 mb-2 text-foreground" {...props} />,
     h2: ({ ...props }) => <h2 className="text-xl font-bold mt-3 mb-2 text-foreground" {...props} />,
@@ -29,7 +59,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     tr: ({ ...props }) => <tr {...props} />,
     th: ({ ...props }) => <th {...props} />,
     td: ({ ...props }) => <td {...props} />,
-    code: ({ className, children, ...props }: any) => {
+    code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { className?: string }) => {
       const isInline = !className;
       return isInline ? (
         <code className="bg-muted text-foreground px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
@@ -44,6 +74,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   };
 
   const renderMessageWithCitations = (content: string, sources?: Source[]) => {
+    // Remove inline source citations like "(Source 1)", "(Source 1, Source 4)", etc.
+    const cleanedContent = content.replace(/\(Source \d+(?:,\s*Source \d+)*\)/g, '').trim();
+
     if (!sources || sources.length === 0) {
       return (
         <div className="text-sm markdown-table">
@@ -51,135 +84,19 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             remarkPlugins={[remarkGfm]}
             components={markdownComponents}
           >
-            {content}
+            {cleanedContent}
           </ReactMarkdown>
         </div>
       );
     }
 
-    // Custom component for inline citations
-    const Citation = ({ sourceNum }: { sourceNum: string }) => {
-      const sourceIndex = parseInt(sourceNum) - 1;
-      const source = sources[sourceIndex];
-      const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
-      const [isVisible, setIsVisible] = useState(false);
-      const citationRef = useRef<HTMLSpanElement>(null);
-
-      if (!source) return null;
-
-      const handleMouseEnter = () => {
-        if (citationRef.current) {
-          const rect = citationRef.current.getBoundingClientRect();
-          const tooltipWidth = 320; // w-80 = 320px
-          const viewportWidth = window.innerWidth;
-
-          // Calculate left position to keep tooltip in viewport
-          let left = rect.left + rect.width / 2;
-
-          // If tooltip would go off right edge, align it to right edge
-          if (left + tooltipWidth / 2 > viewportWidth - 20) {
-            left = viewportWidth - tooltipWidth / 2 - 20;
-          }
-
-          // If tooltip would go off left edge, align it to left edge
-          if (left - tooltipWidth / 2 < 20) {
-            left = tooltipWidth / 2 + 20;
-          }
-
-          setTooltipPosition({
-            top: rect.bottom + window.scrollY + 8,
-            left: left,
-          });
-          setIsVisible(true);
-        }
-      };
-
-      const handleMouseLeave = () => {
-        setIsVisible(false);
-      };
-
-      return (
-        <span className="relative inline-block">
-          <span
-            ref={citationRef}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            <sup className="text-primary cursor-help font-medium">[{sourceNum}]</sup>
-          </span>
-          {isVisible && (
-            <span
-              className="fixed w-72 max-w-[90vw] bg-popover text-popover-foreground text-xs rounded-lg p-3 shadow-lg border border-border z-[9999] block max-h-40 overflow-hidden"
-              style={{
-                top: `${tooltipPosition.top}px`,
-                left: `${tooltipPosition.left}px`,
-                transform: 'translateX(-50%)',
-              }}
-            >
-              <span className="font-semibold mb-1 block text-sm">{source.filename}</span>
-              <span className="text-muted-foreground line-clamp-4 block text-xs">{source.chunk_text}</span>
-            </span>
-          )}
-        </span>
-      );
-    };
-
-    // Enhanced markdown components with citation support
-    const componentsWithCitations = {
-      ...markdownComponents,
-      p: ({ children, ...props }: any) => {
-        // Process children to find and replace citations
-        const processChildren = (child: any): any => {
-          if (typeof child === 'string') {
-            const parts = child.split(/(\(Source \d+\))/g);
-            return parts.map((part, i) => {
-              const match = part.match(/\(Source (\d+)\)/);
-              if (match) {
-                return <Citation key={`cite-${i}`} sourceNum={match[1]} />;
-              }
-              return part;
-            });
-          }
-          return child;
-        };
-
-        const processedChildren = Array.isArray(children)
-          ? children.map(processChildren)
-          : processChildren(children);
-
-        return <p className="leading-relaxed mb-2 text-foreground" {...props}>{processedChildren}</p>;
-      },
-      li: ({ children, ...props }: any) => {
-        // Process children to find and replace citations
-        const processChildren = (child: any): any => {
-          if (typeof child === 'string') {
-            const parts = child.split(/(\(Source \d+\))/g);
-            return parts.map((part, i) => {
-              const match = part.match(/\(Source (\d+)\)/);
-              if (match) {
-                return <Citation key={`cite-${i}`} sourceNum={match[1]} />;
-              }
-              return part;
-            });
-          }
-          return child;
-        };
-
-        const processedChildren = Array.isArray(children)
-          ? children.map(processChildren)
-          : processChildren(children);
-
-        return <li className="leading-relaxed text-foreground" {...props}>{processedChildren}</li>;
-      },
-    };
-
     return (
       <div className="text-sm markdown-table">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
-          components={componentsWithCitations}
+          components={markdownComponents}
         >
-          {content}
+          {cleanedContent}
         </ReactMarkdown>
       </div>
     );
@@ -187,18 +104,45 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <div className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[89%] rounded-xl ${
-          message.type === 'user'
-            ? 'bg-primary text-primary-foreground py-2 px-5'
-            : 'py-2'
-        }`}
-      >
-        {message.type === 'user' ? (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{message.content}</p>
-        ) : (
-          renderMessageWithCitations(message.content, message.sources)
+      <div className="max-w-[89%] flex flex-col gap-3">
+        <div
+          className={`rounded-xl ${
+            message.type === 'user'
+              ? 'bg-primary text-primary-foreground py-2 px-5'
+              : 'py-2'
+          }`}
+        >
+          {message.type === 'user' ? (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{message.content}</p>
+          ) : (
+            renderMessageWithCitations(message.content, message.sources)
+          )}
+        </div>
+
+        {/* Citation Cards - only show for assistant messages with sources */}
+        {message.type === 'assistant' && message.sources && message.sources.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            {groupSourcesByFilename(message.sources).map((group) => (
+              <CitationCard
+                key={group.filename}
+                filename={group.filename}
+                sources={group.sources}
+                index={group.index}
+                relevanceScore={group.relevance_score}
+                onViewFullText={() => handleViewFullText(group.filename, group.sources, group.index)}
+              />
+            ))}
+          </div>
         )}
+
+        {/* Citation Modal */}
+        <CitationModal
+          filename={selectedFilename}
+          sources={selectedSources}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          citationNumber={selectedCitationNumber}
+        />
       </div>
     </div>
   );
