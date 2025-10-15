@@ -132,7 +132,7 @@ export function DocumentsModal({
             <div className="bg-card rounded-2xl p-8 w-full max-w-4xl h-[50vh] flex flex-col" style={{ boxShadow: 'var(--shadow-2xl)' }}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold text-card-foreground">
-                  {showUploadOptions ? 'Upload Document' : 'Project files'}
+                  {showUploadOptions ? 'Upload Sources' : 'All Sources'}
                 </h2>
                 <div className="flex items-center gap-3">
                   <button
@@ -147,7 +147,7 @@ export function DocumentsModal({
                     ) : (
                       <>
                         <Upload className="w-4 h-4" />
-                        <span>Upload Document</span>
+                        <span>Upload Sources</span>
                       </>
                     )}
                   </button>
@@ -322,7 +322,7 @@ export function DocumentsModal({
                         <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
                         <p className="text-sm text-muted-foreground">No files uploaded yet</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Click &quot;Upload Document&quot; to get started
+                          Click &quot;Upload Sources&quot; to get started
                         </p>
                       </div>
                     )}

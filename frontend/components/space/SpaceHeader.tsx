@@ -78,9 +78,9 @@ export function SpaceHeader({ documentsCount, onOpenDocuments, onClearChat, show
           className="border border-border bg-secondary text-secondary-foreground py-2 px-5 rounded-xl hover:opacity-90 transition-all gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
         >
           {loadingDocuments ? (
-            <span>Fetching documents...</span>
+            <span>Fetching sources...</span>
           ) : (
-            <span>{documentsCount > 0 ? `${documentsCount} document${documentsCount > 1 ? 's' : ''}` : 'Upload Documents'}</span>
+            <span>{documentsCount > 0 ? `${documentsCount} source${documentsCount > 1 ? 's' : ''}` : 'Upload Sources'}</span>
           )}
         </button>
       </div>
