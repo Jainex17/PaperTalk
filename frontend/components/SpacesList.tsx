@@ -60,15 +60,12 @@ export function SpacesList() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <button
               onClick={handleCreateNewSpace}
-              className="bg-card rounded-2xl p-6 border border-border hover:border-primary transition-all duration-200 flex flex-col items-center justify-center h-48 group"
-              style={{ boxShadow: 'var(--shadow-sm)' }}
+              className="bg-card rounded-2xl p-6 border border-border/50 hover:border-primary/50 transition-all duration-300 flex flex-col items-center justify-center h-48 group hover:shadow-lg hover:scale-[1.02] gap-3"
             >
-              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-              </div>
-              <span className="text-card-foreground font-medium font-sans">Create New Space</span>
+              <span className="text-foreground font-medium font-sans text-center">Create New Space</span>
             </button>
 
             {isLoading ? (

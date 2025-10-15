@@ -1,9 +1,14 @@
+"use client";
+
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Image from 'next/image';
 import ss from '@/assets/ss.png';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Home() {
+  const { isAuthenticated, loading } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -18,14 +23,16 @@ export default function Home() {
             From legal agreements to financial reports, PaperTalk brings your documents to life. You can ask questions, get summaries, find information, and more.
           </p>
 
-          <div className="mb-16">
-            <Link
-              href="/spaces"
-              className="inline-block px-8 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
-            >
-              Start For Free
-            </Link>
-          </div>
+          {!loading && (
+            <div className="mb-16">
+              <Link
+                href="/spaces"
+                className="inline-block px-8 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+              >
+                {isAuthenticated ? 'Go to Spaces' : 'Get Started'}
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Screenshot Preview Section */}

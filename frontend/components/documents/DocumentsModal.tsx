@@ -135,15 +135,22 @@ export function DocumentsModal({
                   {showUploadOptions ? 'Upload Document' : 'Project files'}
                 </h2>
                 <div className="flex items-center gap-3">
-                  {!showUploadOptions && (
-                    <button
-                      onClick={() => setShowUploadOptions(true)}
-                      className="px-4 py-2 border border-border flex items-center gap-2 cursor-pointer justify-center bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-all text-sm font-medium"
-                    >
-                      <Upload className="w-4 h-4" />
-                      <span>Upload Document</span>
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setShowUploadOptions(!showUploadOptions)}
+                    className="px-4 py-2 border border-border flex items-center gap-2 cursor-pointer justify-center bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-all text-sm font-medium"
+                  >
+                    {showUploadOptions ? (
+                      <>
+                        <FileText className="w-4 h-4" />
+                        <span>View Documents</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>Upload Document</span>
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={handleCloseModal}
                     className="px-2 py-2 border border-border flex items-center cursor-pointer justify-center bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-all text-sm font-medium"

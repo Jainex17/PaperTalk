@@ -1,6 +1,11 @@
+"use client";
+
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
+  const { user, isAuthenticated, loading } = useAuth();
+
   return (
     <nav className="w-full px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -35,12 +40,20 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center gap-4">
-        <Link
-          href="/login"
-          className="px-6 py-2 text-sm text-foreground hover:text-muted-foreground transition-colors"
-        >
-          Sign In
-        </Link>
+        {!loading && (
+          isAuthenticated && user ? (
+            <span className="text-sm text-foreground">
+              {user.name}
+            </span>
+          ) : (
+            <Link
+              href="/login"
+              className="px-6 py-2 text-sm text-foreground hover:text-muted-foreground transition-colors"
+            >
+              Sign In
+            </Link>
+          )
+        )}
       </div>
     </nav>
   );

@@ -13,7 +13,3 @@ export const formatDate = (date: string | Date): string => {
     day: 'numeric'
   });
 };
-
-export const getRandomCardColor = (colors: string[]): string => {
-  return colors[Math.floor(Math.random() * colors.length)];
-};

@@ -1,16 +1,23 @@
 import { authFetch, getAuthToken } from './client';
 import { API_URL } from '../config';
 
-export const getDocuments = async (spaceId: string): Promise<string[]> => {
+export interface SpaceDetails {
+  id: string;
+  name: string;
+  created_at: string;
+  documents: string[];
+}
+
+export const getSpaceDetails = async (spaceId: string): Promise<SpaceDetails> => {
   try {
-    const response = await authFetch(`/getdocuments/${spaceId}`);
+    const response = await authFetch(`/spaces/${spaceId}`);
     if (!response.ok) {
-      throw new Error('Failed to fetch documents');
+      throw new Error('Failed to fetch space details');
     }
     const data = await response.json();
-    return data.documents || [];
+    return data;
   } catch (error) {
-    console.error('Error fetching documents:', error);
+    console.error('Error fetching space details:', error);
     throw error;
   }
 };

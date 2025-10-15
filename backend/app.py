@@ -15,7 +15,7 @@ from models import (
     RenameSpaceRequest,
     UploadResponse,
     SpaceResponse,
-    DocumentsResponse,
+    SpaceDetailsResponse,
     MessageResponse
 )
 from services.query_service import QueryService
@@ -170,23 +170,49 @@ async def list_spaces(request: Request, current_user: dict = Depends(get_current
         )
 
 
-@app.get("/getdocuments/{space_id}", response_model=DocumentsResponse, tags=["Documents"])
+@app.get("/spaces/{space_id}", response_model=SpaceDetailsResponse, tags=["Spaces"])
 @limiter.limit("60/minute")  # 60 requests per minute per IP
-async def list_documents(
+async def get_space_details(
     request: Request,
     space_id: str,
     current_user: dict = Depends(get_current_user)
-) -> DocumentsResponse:
+) -> SpaceDetailsResponse:
     try:
         user_id = current_user["user_id"]
-        documents = get_documents_by_space(space_id, user_id)
-        return DocumentsResponse(documents=documents)
+
+        # Import here to avoid circular dependency
+        from db_utils import get_db_session, Spaces
+        from datetime import datetime
+
+        with get_db_session() as session:
+            # Get space details
+            space = session.query(Spaces).filter(
+                Spaces.id == space_id,
+                Spaces.user_id == user_id
+            ).first()
+
+            if not space:
+                return SpaceDetailsResponse(
+                    id=space_id,
+                    name="Untitled Space",
+                    created_at=datetime.now().isoformat(),
+                    documents=[]
+                )
+
+            documents = get_documents_by_space(space_id, user_id)
+
+            return SpaceDetailsResponse(
+                id=space.id,
+                name=space.name,
+                created_at=space.created_at.isoformat(),
+                documents=documents
+            )
 
     except Exception as e:
-        logger.error(f"Error retrieving documents: {str(e)}", exc_info=True)
+        logger.error(f"Error retrieving space details: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve documents"
+            detail="Failed to retrieve space details"
         )
 
 

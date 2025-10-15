@@ -2,7 +2,7 @@ import logging
 from typing import List, Dict, Optional
 from contextlib import contextmanager
 
-from sqlalchemy import ForeignKey, create_engine, Column, String, Integer, Text, DateTime
+from sqlalchemy import ForeignKey, create_engine, Column, String, Integer, Text, DateTime, Index
 from sqlalchemy import text as sql_text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from pgvector.sqlalchemy import Vector
@@ -48,20 +48,25 @@ class Users(Base):
     picture = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False)
 
+
 class Spaces(Base):
     __tablename__ = "spaces"
     id = Column(String, primary_key=True)
-    user_id = Column(String, ForeignKey('users.id'), nullable=False)
+    user_id = Column(String, ForeignKey('users.id'), nullable=False, index=True)
     name = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False)
+
+    __table_args__ = (
+        Index('ix_spaces_user_id_space_id', 'user_id', 'id'),
+    )
 
 class Document(Base):
     __tablename__ = "documents"
     id = Column(Integer, primary_key=True)
     doc_id = Column(String, nullable=False)
-    original_file_id = Column(String, nullable=False)
+    original_file_id = Column(String, nullable=False, index=True)
     chunk_index = Column(Integer, nullable=False)
-    space_id = Column(String, ForeignKey('spaces.id'), nullable=False)
+    space_id = Column(String, ForeignKey('spaces.id'), nullable=False, index=True)
     text = Column(Text, nullable=False)
     embedding = Column(Vector(768), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=sql_text("now()"))

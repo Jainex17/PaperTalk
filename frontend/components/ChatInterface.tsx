@@ -46,6 +46,7 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               <SpaceHeader
                 documentsCount={documents.length}
                 onOpenDocuments={() => setIsDialogOpen(true)}
+                loadingDocuments={loadingDocuments}
               />
             </div>
             <div className="w-full space-y-8">
@@ -67,6 +68,7 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                 onOpenDocuments={() => setIsDialogOpen(true)}
                 onClearChat={clearMessages}
                 showClearChat={true}
+                loadingDocuments={loadingDocuments}
               />
             </div>
             <MessageList messages={messages} loading={loading} />

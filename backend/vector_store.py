@@ -177,7 +177,7 @@ def classify_query(query: str) -> str:
         classification_prompt = CLASSIFICATION_PROMPT_TEMPLATE.format(query=query)
 
         response = genai_client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.0-flash",
             contents=classification_prompt,
             config={
                 "temperature": 0.05,

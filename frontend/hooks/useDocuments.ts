@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Document } from '@/types';
-import { getDocuments as getDocumentsAPI, uploadDocument as uploadDocumentAPI, uploadText as uploadTextAPI, deleteDocument as deleteDocumentAPI } from '@/lib/api/documents';
+import { getSpaceDetails, uploadDocument as uploadDocumentAPI, uploadText as uploadTextAPI, deleteDocument as deleteDocumentAPI } from '@/lib/api/documents';
 import { getFileType } from '@/lib/utils';
 
 export const useDocuments = (spaceId: string) => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
+  const [spaceName, setSpaceName] = useState<string>('');
 
   const fetchDocuments = async () => {
     setLoadingDocuments(true);
     try {
-      const docs = await getDocumentsAPI(spaceId);
-      const formattedDocs: Document[] = docs.map((doc: string) => ({
+      const spaceDetails = await getSpaceDetails(spaceId);
+      setSpaceName(spaceDetails.name);
+      const formattedDocs: Document[] = spaceDetails.documents.map((doc: string) => ({
         id: doc,
         name: doc,
         type: getFileType(doc),
@@ -26,6 +28,11 @@ export const useDocuments = (spaceId: string) => {
   };
 
   useEffect(() => {
+    // Reset state when space ID changes
+    setSpaceName('');
+    setDocuments([]);
+    setLoadingDocuments(true);
+
     fetchDocuments();
   }, [spaceId]);
 
@@ -97,5 +104,5 @@ export const useDocuments = (spaceId: string) => {
     }
   };
 
-  return { documents, loadingDocuments, uploadDocument, uploadText, deleteDocument, refetch: fetchDocuments };
+  return { documents, loadingDocuments, spaceName, uploadDocument, uploadText, deleteDocument, refetch: fetchDocuments };
 };

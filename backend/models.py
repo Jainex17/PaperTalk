@@ -47,7 +47,10 @@ class SpaceResponse(BaseModel):
     created_at: str
 
 
-class DocumentsResponse(BaseModel):
+class SpaceDetailsResponse(BaseModel):
+    id: str
+    name: str
+    created_at: str
     documents: List[str]
 
 

@@ -10,9 +10,10 @@ interface SpaceHeaderProps {
   onOpenDocuments: () => void;
   onClearChat?: () => void;
   showClearChat?: boolean;
+  loadingDocuments?: boolean;
 }
 
-export function SpaceHeader({ documentsCount, onOpenDocuments, onClearChat, showClearChat = false }: SpaceHeaderProps) {
+export function SpaceHeader({ documentsCount, onOpenDocuments, onClearChat, showClearChat = false, loadingDocuments = false }: SpaceHeaderProps) {
   const { currentSpace } = useSpace();
   const {
     editSpaceName,
@@ -73,9 +74,14 @@ export function SpaceHeader({ documentsCount, onOpenDocuments, onClearChat, show
         )}
         <button
           onClick={onOpenDocuments}
-          className="border border-border bg-secondary text-secondary-foreground py-2 px-5 rounded-xl hover:opacity-90 transition-all gap-2 cursor-pointer"
+          disabled={loadingDocuments}
+          className="border border-border bg-secondary text-secondary-foreground py-2 px-5 rounded-xl hover:opacity-90 transition-all gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
         >
-          <span>{documentsCount > 0 ? `${documentsCount} file${documentsCount > 1 ? 's' : ''}` : 'Upload Documents'}</span>
+          {loadingDocuments ? (
+            <span>Fetching documents...</span>
+          ) : (
+            <span>{documentsCount > 0 ? `${documentsCount} document${documentsCount > 1 ? 's' : ''}` : 'Upload Documents'}</span>
+          )}
         </button>
       </div>
     </div>
