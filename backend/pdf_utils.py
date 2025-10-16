@@ -14,19 +14,19 @@ def extract_text(file_path: str) -> Optional[str]:
     ext = os.path.splitext(file_path)[1].lower()
 
     try:
-        if ext == ".txt":
-            return _extract_from_txt(file_path)
+        if ext in [".txt", ".md"]:
+            return _extract_from_text_file(file_path)
         elif ext == ".pdf":
             return _extract_from_pdf(file_path)
         else:
-            raise ValueError("Unsupported file type. Only .pdf and .txt are allowed.")
+            raise ValueError("Unsupported file type. Only .pdf, .txt, and .md are allowed.")
 
     except Exception as e:
         logger.error(f"Error extracting text from {file_path}: {str(e)}", exc_info=True)
         return None
 
 
-def _extract_from_txt(file_path: str) -> str:
+def _extract_from_text_file(file_path: str) -> str:
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()
 

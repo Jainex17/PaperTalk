@@ -2,6 +2,7 @@ export const getFileType = (filename: string): string => {
   const ext = filename.split('.').pop()?.toLowerCase();
   if (ext === 'pdf') return 'PDF';
   if (ext === 'txt') return 'TXT';
+  if (ext === 'md') return 'Markdown';
   return 'Document';
 };
 

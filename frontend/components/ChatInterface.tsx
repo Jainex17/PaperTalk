@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMessages } from '@/hooks/useMessages';
 import { useDocuments } from '@/hooks/useDocuments';
+import { useSpace } from '@/context/SpaceContext';
 import { MessageInput } from './chat/MessageInput';
 import { MessageList } from './chat/MessageList';
 import { SuggestedPrompts } from './chat/SuggestedPrompts';
@@ -18,8 +19,20 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   const [hoveredPrompt, setHoveredPrompt] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const { setCurrentSpace } = useSpace();
   const { messages, loading, sendMessage, clearMessages } = useMessages(spaceid);
-  const { documents, loadingDocuments, uploadDocument, uploadText, deleteDocument } = useDocuments(spaceid);
+  const { documents, loadingDocuments, spaceName, uploadDocument, uploadText, deleteDocument } = useDocuments(spaceid);
+
+  // Update current space in context when spaceName is loaded
+  useEffect(() => {
+    if (spaceName && spaceid) {
+      setCurrentSpace({
+        id: spaceid,
+        name: spaceName,
+        created_at: new Date().toISOString(), // This will be overwritten if we fetch full details
+      });
+    }
+  }, [spaceName, spaceid, setCurrentSpace]);
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;

@@ -37,10 +37,12 @@ export function DocumentsModal({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile && (selectedFile.type === 'application/pdf' || selectedFile.type === 'text/plain')) {
+    if (selectedFile && (selectedFile.type === 'application/pdf' || selectedFile.type === 'text/plain' || selectedFile.type === 'text/markdown' || selectedFile.name.endsWith('.md'))) {
+      // Close upload options immediately after file selection
+      setShowUploadOptions(false);
+
       try {
         await onFileUpload(selectedFile);
-        setShowUploadOptions(false);
       } catch {
         alert('Failed to upload file. Please try again.');
       }
@@ -192,7 +194,7 @@ export function DocumentsModal({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.txt"
+                  accept=".pdf,.txt,.md"
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -253,7 +255,7 @@ export function DocumentsModal({
                         <Upload className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                         <p className="text-lg font-medium text-foreground mb-2">Click to choose files</p>
                         <p className="text-sm text-muted-foreground">or drag and drop</p>
-                        <p className="text-xs text-muted-foreground mt-2">PDF or TXT files (max {MAX_FILES_FREE} files)</p>
+                        <p className="text-xs text-muted-foreground mt-2">PDF, TXT, or MD files (max {MAX_FILES_FREE} files)</p>
                       </div>
                     )}
                   </>
