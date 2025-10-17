@@ -234,3 +234,8 @@ body {
 .markdown-table tbody tr:nth-child(even) {
   background-color: var(--muted);
 }
+
+.citation-nbsp {
+  display: inline-block;
+  width: 0.15em;
+}

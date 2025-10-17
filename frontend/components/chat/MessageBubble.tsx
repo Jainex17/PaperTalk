@@ -4,7 +4,7 @@ import { Message, Source } from '@/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useState } from 'react';
-import { CitationCard } from './CitationCard';
+import { InlineCitation } from './InlineCitation';
 import { CitationModal } from './CitationModal';
 
 interface MessageBubbleProps {
@@ -74,9 +74,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   };
 
   const renderMessageWithCitations = (content: string, sources?: Source[]) => {
-    // Remove inline source citations like "(Source 1)", "(Source 1, Source 4)", etc.
-    const cleanedContent = content.replace(/\(Source \d+(?:,\s*Source \d+)*\)/g, '').trim();
-
     if (!sources || sources.length === 0) {
       return (
         <div className="text-sm markdown-table">
@@ -84,19 +81,125 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             remarkPlugins={[remarkGfm]}
             components={markdownComponents}
           >
-            {cleanedContent}
+            {content}
           </ReactMarkdown>
         </div>
       );
     }
 
+    // Group sources by filename for inline citations
+    const groupedSources = groupSourcesByFilename(sources);
+
+    // Extract citation references from content and create a map
+    const citationMap = new Map<number, { filename: string; sources: Source[]; index: number }>();
+    groupedSources.forEach((group) => {
+      citationMap.set(group.index, group);
+    });
+
+    // Process content to replace citation markers with placeholders
+    // Support both old format: (Source 1, Source 2) and new format: [cite:1,2,3]
+    const oldCitationRegex = /\(Source (\d+(?:,\s*Source \d+)*)\)/g;
+    const newCitationRegex = /\[cite:(\d+(?:,\s*\d+)*)\]/g;
+    const citationPositions = new Map<string, number[]>();
+    let citationCounter = 0;
+
+    // Replace both citation formats with unique placeholders
+    let processedContent = content;
+
+    // Replace new format [cite:1,2,3]
+    processedContent = processedContent.replace(newCitationRegex, (match, sourceList) => {
+      const sourceNumbers = sourceList.split(',').map(s => parseInt(s.trim()));
+      const placeholder = `__CITATION_${citationCounter}__`;
+      citationPositions.set(placeholder, sourceNumbers);
+      citationCounter++;
+      return placeholder;
+    });
+
+    // Replace old format (Source 1, Source 2)
+    processedContent = processedContent.replace(oldCitationRegex, (match, sourceList) => {
+      const sourceNumbers = sourceList.match(/\d+/g)?.map(Number) || [];
+      const placeholder = `__CITATION_${citationCounter}__`;
+      citationPositions.set(placeholder, sourceNumbers);
+      citationCounter++;
+      return placeholder;
+    });
+
+    // Extract citations from end of paragraphs only
+    const paragraphs = processedContent.split('\n\n');
+    const paragraphsWithCitations = paragraphs.map((para) => {
+      // Find all citations in this paragraph
+      const citations: number[] = [];
+      const placeholderRegex = /__CITATION_(\d+)__/g;
+      let match;
+
+      while ((match = placeholderRegex.exec(para)) !== null) {
+        const placeholder = match[0];
+        const sourceNumbers = citationPositions.get(placeholder) || [];
+        citations.push(...sourceNumbers);
+      }
+
+      // Remove all citation placeholders from paragraph
+      let cleanPara = para.replace(/__CITATION_\d+__/g, '');
+
+      // Fix spacing issues: remove extra spaces before punctuation
+      cleanPara = cleanPara.replace(/\s+([.,!?;:])/g, '$1');
+
+      // Fix multiple spaces
+      cleanPara = cleanPara.replace(/\s+/g, ' ').trim();
+
+      // Get unique citations
+      const uniqueCitations = [...new Set(citations)];
+
+      return { text: cleanPara, citations: uniqueCitations };
+    });
+
+    // Reconstruct content without placeholders
+    const cleanContent = paragraphsWithCitations.map(p => p.text).join('\n\n');
+
+    // Custom markdown components with inline citation rendering
+    let currentParagraphIndex = -1;
+
+    const markdownComponentsWithCitations = {
+      ...markdownComponents,
+      p: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => {
+        currentParagraphIndex++;
+        const paraData = paragraphsWithCitations[currentParagraphIndex] || { text: '', citations: [] };
+
+        return (
+          <p className="my-2 leading-relaxed text-foreground" {...props}>
+            {children}
+            {paraData.citations.length > 0 && (
+              <span className="inline">
+                <span className="citation-nbsp"> </span>
+                {paraData.citations.map((sourceNum) => {
+                  const citationInfo = citationMap.get(sourceNum);
+                  if (citationInfo) {
+                    return (
+                      <InlineCitation
+                        key={`citation-${currentParagraphIndex}-${sourceNum}`}
+                        index={citationInfo.index}
+                        filename={citationInfo.filename}
+                        sources={citationInfo.sources}
+                        onClick={() => handleViewFullText(citationInfo.filename, citationInfo.sources, citationInfo.index)}
+                      />
+                    );
+                  }
+                  return null;
+                })}
+              </span>
+            )}
+          </p>
+        );
+      },
+    };
+
     return (
       <div className="text-sm markdown-table">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
-          components={markdownComponents}
+          components={markdownComponentsWithCitations}
         >
-          {cleanedContent}
+          {cleanContent}
         </ReactMarkdown>
       </div>
     );
@@ -118,22 +221,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             renderMessageWithCitations(message.content, message.sources)
           )}
         </div>
-
-        {/* Citation Cards - only show for assistant messages with sources */}
-        {message.type === 'assistant' && message.sources && message.sources.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-            {groupSourcesByFilename(message.sources).map((group) => (
-              <CitationCard
-                key={group.filename}
-                filename={group.filename}
-                sources={group.sources}
-                index={group.index}
-                relevanceScore={group.relevance_score}
-                onViewFullText={() => handleViewFullText(group.filename, group.sources, group.index)}
-              />
-            ))}
-          </div>
-        )}
 
         {/* Citation Modal */}
         <CitationModal

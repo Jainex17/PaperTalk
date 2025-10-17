@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import logo from '@/assets/logo.png';
+import Image from 'next/image';
 
 export default function Navbar() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -9,20 +11,8 @@ export default function Navbar() {
   return (
     <nav className="w-full px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-          <svg
-            className="w-5 h-5 text-primary-foreground"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+        <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center">
+          <Image src={logo} alt="PaperTalk" className="object-contain" />
         </div>
         <span className="text-xl font-semibold text-foreground">PaperTalk</span>
       </div>

@@ -57,7 +57,7 @@ export function SpaceHeader({ documentsCount, onOpenDocuments, onClearChat, show
               onClick={() => setEditSpaceName(true)}
               title="Click to edit space name"
             >
-              {currentSpace ? currentSpace.name : 'New Space'}
+              {currentSpace ? currentSpace.name : 'Untitled Space'}
             </h1>
           )}
         </div>

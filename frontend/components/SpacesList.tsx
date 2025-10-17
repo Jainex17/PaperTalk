@@ -3,8 +3,6 @@
 import { useSpace } from '@/context/SpaceContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
-import logo from '@/assets/logo.png';
 import { SpaceCard } from './space/SpaceCard';
 import { LoadingSkeleton } from './ui/LoadingSkeleton';
 import { Space } from '@/types';
@@ -44,7 +42,6 @@ export function SpacesList() {
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-5xl flex items-center gap-4 font-normal text-foreground font-serif">
               Welcome to <span className="text-foreground">PaperTalk</span>
-              <Image src={logo} alt="PaperTalk" width={48} height={48} className="object-contain pb-2" />
             </h1>
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl font-sans">
