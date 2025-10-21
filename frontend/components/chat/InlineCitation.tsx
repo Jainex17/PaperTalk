@@ -146,9 +146,10 @@ export function InlineCitation({ index, filename, sources, onClick }: InlineCita
       >
         <button
           ref={buttonRef}
-          className="inline-flex items-center justify-center px-2 py-0.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 text-[8px] font-medium hover:bg-primary/20 transition-colors cursor-pointer mx-0.5 align-middle"
+          className="inline-flex items-center justify-center px-2 py-0.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 text-xs font-medium hover:bg-primary/20 transition-colors cursor-pointer mx-0.5 align-middle"
           onClick={onClick}
           aria-label={`Citation: ${filename}`}
+          style={{ minWidth: '40px', minHeight: '20px' }}
         >
           {shortFilename}
         </button>

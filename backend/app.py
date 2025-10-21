@@ -20,7 +20,7 @@ from models import (
 )
 from services.query_service import QueryService
 from services.document_service import DocumentService
-from db_utils import get_all_spaces, get_documents_by_space, update_space_name, delete_document
+from db_utils import get_all_spaces, get_documents_by_space, update_space_name, delete_space, delete_document
 from routers import auth
 from auth_utils import get_current_user
 
@@ -244,6 +244,36 @@ async def rename_space(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to rename space"
+        )
+
+
+@app.delete("/spaces/{space_id}", response_model=MessageResponse, tags=["Spaces"])
+@limiter.limit("30/minute")  # 30 requests per minute per IP
+async def delete_space_endpoint(
+    request: Request,
+    space_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> MessageResponse:
+    try:
+        user_id = current_user["user_id"]
+        success = delete_space(space_id, user_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Space not found"
+            )
+
+        return MessageResponse(message="Space deleted successfully")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Error deleting space: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete space"
         )
 
 

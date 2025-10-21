@@ -9,7 +9,7 @@ from pgvector.sqlalchemy import Vector
 from google import genai
 
 from db_utils import get_db_session, Document, Spaces, verify_space_access
-from constants import DEFAULT_SPACE_NAME, QUERY_TYPE_ANALYZE_ALL
+from constants import DEFAULT_SPACE_NAME
 from config.config import settings
 from prompts import CLASSIFICATION_PROMPT_TEMPLATE
 

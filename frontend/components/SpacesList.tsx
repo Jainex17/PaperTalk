@@ -10,7 +10,7 @@ import { UserProfile } from './UserProfile';
 
 export function SpacesList() {
   const [isLoading, setIsLoading] = useState(true);
-  const { spaces, getSpaces, setCurrentSpace } = useSpace();
+  const { spaces, getSpaces, setCurrentSpace, deleteSpace } = useSpace();
   const router = useRouter();
 
   const handleCreateNewSpace = () => {
@@ -25,6 +25,10 @@ export function SpacesList() {
       created_at: space.created_at
     });
     router.push('/space/' + space.id);
+  };
+
+  const handleDeleteSpace = async (spaceId: string) => {
+    await deleteSpace(spaceId);
   };
 
   useEffect(() => {
@@ -73,6 +77,7 @@ export function SpacesList() {
                   key={space.id}
                   space={space}
                   onClick={() => handleNavigateToSpace(space)}
+                  onDelete={handleDeleteSpace}
                 />
               ))
             )}

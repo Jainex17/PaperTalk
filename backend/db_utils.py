@@ -141,16 +141,40 @@ def update_space_name(space_id: str, new_name: str, user_id: str) -> bool:
             session.rollback()
             raise
 
+def delete_space(space_id: str, user_id: str) -> bool:
+    """Delete a space and all its associated documents.
+    """
+    with get_db_session() as session:
+        try:
+            # First verify the space belongs to the user
+            space = session.query(Spaces).filter(
+                Spaces.id == space_id,
+                Spaces.user_id == user_id
+            ).first()
+
+            if not space:
+                logger.warning(f"Space not found or unauthorized: {space_id} for user {user_id}")
+                return False
+
+            # Delete all documents (chunks) in the space
+            deleted_chunks = session.query(Document).filter(
+                Document.space_id == space_id
+            ).delete()
+
+            # Delete the space itself
+            session.delete(space)
+            session.commit()
+
+            logger.info(f"Deleted space {space_id} with {deleted_chunks} chunks for user {user_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error deleting space {space_id}: {str(e)}", exc_info=True)
+            session.rollback()
+            raise
+
 def delete_document(space_id: str, original_file_id: str, user_id: str) -> int:
     """Delete all chunks of a document from a specific space.
-
-    Args:
-        space_id: The space ID containing the document
-        original_file_id: The original file ID to delete
-        user_id: The user ID who owns the space
-
-    Returns:
-        Number of chunks deleted
     """
     with get_db_session() as session:
         try:
@@ -180,13 +204,6 @@ def delete_document(space_id: str, original_file_id: str, user_id: str) -> int:
 
 def verify_space_access(space_id: str, user_id: str) -> bool:
     """Verify that a user has access to a specific space.
-
-    Args:
-        space_id: The space ID to check
-        user_id: The user ID to verify
-
-    Returns:
-        True if user owns the space, False otherwise
     """
     with get_db_session() as session:
         try:

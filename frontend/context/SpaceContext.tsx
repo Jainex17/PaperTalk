@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Space } from '@/types';
-import { getSpaces as getSpacesAPI } from '@/lib/api/spaces';
+import { getSpaces as getSpacesAPI, deleteSpace as deleteSpaceAPI } from '@/lib/api/spaces';
 
 interface SpaceContextType {
   spaces: Space[];
@@ -10,6 +10,7 @@ interface SpaceContextType {
   setSpaces: (spaces: Space[]) => void;
   setCurrentSpace: (space: Space | null) => void;
   getSpaces: () => Promise<void>;
+  deleteSpace: (spaceId: string) => Promise<void>;
 }
 
 const SpaceContext = createContext<SpaceContextType | undefined>(undefined);
@@ -27,6 +28,21 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function deleteSpace(spaceId: string) {
+    try {
+      await deleteSpaceAPI(spaceId);
+      // Update local state by removing the deleted space
+      setSpaces(spaces.filter(space => space.id !== spaceId));
+      // Clear current space if it was the deleted one
+      if (currentSpace?.id === spaceId) {
+        setCurrentSpace(null);
+      }
+    } catch (error) {
+      console.error('Error deleting space:', error);
+      throw error;
+    }
+  }
+
   return (
     <SpaceContext.Provider
       value={{
@@ -34,7 +50,8 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
         currentSpace,
         setSpaces,
         setCurrentSpace,
-        getSpaces
+        getSpaces,
+        deleteSpace
       }}
     >
       {children}

@@ -49,6 +49,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     ol: ({ ...props }) => <ol className="list-decimal ml-5 my-2 space-y-1" {...props} />,
     li: ({ ...props }) => <li className="leading-relaxed text-foreground" {...props} />,
     p: ({ ...props }) => <p className="leading-relaxed mb-2 text-foreground" {...props} />,
+    hr: ({ ...props }) => <hr className="my-4 border-border" {...props} />,
     table: ({ ...props }) => (
       <div className="overflow-x-auto my-4">
         <table {...props} />
@@ -107,8 +108,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     let processedContent = content;
 
     // Replace new format [cite:1,2,3]
-    processedContent = processedContent.replace(newCitationRegex, (match, sourceList) => {
-      const sourceNumbers = sourceList.split(',').map(s => parseInt(s.trim()));
+    processedContent = processedContent.replace(newCitationRegex, (_match, sourceList) => {
+      const sourceNumbers = sourceList.split(',').map((s: string) => parseInt(s.trim()));
       const placeholder = `__CITATION_${citationCounter}__`;
       citationPositions.set(placeholder, sourceNumbers);
       citationCounter++;
@@ -116,7 +117,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     });
 
     // Replace old format (Source 1, Source 2)
-    processedContent = processedContent.replace(oldCitationRegex, (match, sourceList) => {
+    processedContent = processedContent.replace(oldCitationRegex, (_match, sourceList) => {
       const sourceNumbers = sourceList.match(/\d+/g)?.map(Number) || [];
       const placeholder = `__CITATION_${citationCounter}__`;
       citationPositions.set(placeholder, sourceNumbers);
@@ -126,7 +127,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
     // Extract citations from end of paragraphs only
     const paragraphs = processedContent.split('\n\n');
-    const paragraphsWithCitations = paragraphs.map((para) => {
+    const paragraphsWithCitations = paragraphs.map((para, idx) => {
       // Find all citations in this paragraph
       const citations: number[] = [];
       const placeholderRegex = /__CITATION_(\d+)__/g;

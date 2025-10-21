@@ -31,3 +31,5 @@ QUERY_TYPE_CROSS_DOCUMENT = "cross_document"
 MAX_CONTEXT_TOKENS_CROSS_DOCUMENT = 5000
 
 DEFAULT_SPACE_NAME = "Untitled Space"
+
+OPENROUTER_API_KEY = "z-ai/glm-4.5-air:free"

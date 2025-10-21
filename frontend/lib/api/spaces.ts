@@ -42,3 +42,18 @@ export const updateSpaceName = async (spaceId: string, newName: string): Promise
     throw error;
   }
 };
+
+export const deleteSpace = async (spaceId: string): Promise<void> => {
+  try {
+    const response = await authFetch(`/spaces/${spaceId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete space');
+    }
+  } catch (error) {
+    console.error('Error deleting space:', error);
+    throw error;
+  }
+};
