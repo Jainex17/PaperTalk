@@ -127,7 +127,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
     // Extract citations from end of paragraphs only
     const paragraphs = processedContent.split('\n\n');
-    const paragraphsWithCitations = paragraphs.map((para, idx) => {
+    const paragraphsWithCitations = paragraphs.map((para) => {
       // Find all citations in this paragraph
       const citations: number[] = [];
       const placeholderRegex = /__CITATION_(\d+)__/g;
@@ -178,7 +178,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                     return (
                       <InlineCitation
                         key={`citation-${currentParagraphIndex}-${sourceNum}`}
-                        index={citationInfo.index}
                         filename={citationInfo.filename}
                         sources={citationInfo.sources}
                         onClick={() => handleViewFullText(citationInfo.filename, citationInfo.sources, citationInfo.index)}

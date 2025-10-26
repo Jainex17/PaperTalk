@@ -6,11 +6,10 @@ interface CitationCardProps {
   filename: string;
   sources: Source[];
   index: number;
-  relevanceScore: number;
   onViewFullText: () => void;
 }
 
-export function CitationCard({ filename, sources, index, relevanceScore, onViewFullText }: CitationCardProps) {
+export function CitationCard({ filename, sources, index, onViewFullText }: CitationCardProps) {
   // Combine all chunk texts
   const combinedText = sources.map(s => s.chunk_text).join(' ... ');
 

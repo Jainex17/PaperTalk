@@ -35,7 +35,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="PaperTalk",
-    description="Document analysis and Q&A system",
+    description="Document analysis",
     version="1.0.0"
 )
 

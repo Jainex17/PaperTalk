@@ -5,13 +5,12 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 interface InlineCitationProps {
-  index: number;
   filename: string;
   sources: Source[];
   onClick: () => void;
 }
 
-export function InlineCitation({ index, filename, sources, onClick }: InlineCitationProps) {
+export function InlineCitation({ filename, sources, onClick }: InlineCitationProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const [position, setPosition] = useState<'center' | 'left' | 'right'>('center');
