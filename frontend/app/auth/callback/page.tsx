@@ -14,7 +14,6 @@ function AuthCallbackContent() {
   useEffect(() => {
     if (processed) return;
 
-    const token = searchParams.get('token');
     const errorMessage = searchParams.get('message');
 
     if (errorMessage) {
@@ -26,24 +25,17 @@ function AuthCallbackContent() {
       return;
     }
 
-    if (token) {
-      setProcessed(true);
-      login(token).then(() => {
-        router.push('/');
-      }).catch((err) => {
-        console.error('Login failed:', err);
-        setError('Authentication failed. Please try again.');
-        setTimeout(() => {
-          router.push('/login');
-        }, 3000);
-      });
-    } else if (!processed) {
-      setError('No token received');
-      setProcessed(true);
+    // Backend has set httpOnly cookie, just need to verify authentication
+    setProcessed(true);
+    login().then(() => {
+      router.push('/');
+    }).catch((err) => {
+      console.error('Login failed:', err);
+      setError('Authentication failed. Please try again.');
       setTimeout(() => {
         router.push('/login');
       }, 3000);
-    }
+    });
   }, [searchParams, login, router, processed]);
 
   if (error) {

@@ -71,6 +71,10 @@ class Document(Base):
     embedding = Column(Vector(768), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=sql_text("now()"))
 
+    __table_args__ = (
+        Index('ix_documents_space_id_embedding', 'space_id', 'embedding', postgresql_using='ivfflat', postgresql_ops={'embedding': 'vector_l2_ops'}),
+    )
+
 Base.metadata.create_all(engine)
 
 def get_all_spaces(user_id: str) -> List[Dict[str, str]]:

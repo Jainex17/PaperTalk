@@ -17,7 +17,7 @@ export function setCookie(name: string, value: string, days: number = 7) {
   if (typeof document === 'undefined') return;
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax;Secure`;
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
 }
 
 export function getAuthHeaders(): HeadersInit {
@@ -48,6 +48,7 @@ export async function authFetch(endpoint: string, options: RequestInit = {}): Pr
 
   const mergedOptions: RequestInit = {
     ...options,
+    credentials: 'include', // Include cookies in requests
     headers: {
       ...authHeaders,
       ...options.headers,

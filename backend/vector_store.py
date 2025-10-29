@@ -15,7 +15,17 @@ from prompts import CLASSIFICATION_PROMPT_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
-embed_model = SentenceTransformer("all-mpnet-base-v2")
+# Lazy load embedding model with caching
+_embed_model = None
+
+def get_embed_model():
+    global _embed_model
+    if _embed_model is None:
+        logger.info("Loading embedding model (first use)...")
+        _embed_model = SentenceTransformer("all-mpnet-base-v2")
+        logger.info("Embedding model loaded")
+    return _embed_model
+
 genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 def upload_document(chunks: List[str], space_id: str, user_id: str, filename: str = None) -> str:
@@ -42,7 +52,7 @@ def upload_document(chunks: List[str], space_id: str, user_id: str, filename: st
                 raise ValueError(f"Unauthorized: Space {space_id} does not belong to user {user_id}")
 
             for i, chunk in enumerate(chunks):
-                embedding = embed_model.encode(chunk).tolist()
+                embedding = get_embed_model().encode(chunk).tolist()
                 doc = Document(
                     doc_id=f"doc_{file_id}_{i}",
                     original_file_id=filename,
@@ -73,7 +83,7 @@ def query_documents_hybrid(
         has_access = verify_space_access(space_id, user_id)
         if not has_access:
             raise ValueError(f"Unauthorized: User {user_id} does not have access to space {space_id}")
-    query_embedding = embed_model.encode([query])[0].tolist()
+    query_embedding = get_embed_model().encode([query])[0].tolist()
 
     with get_db_session() as session:
         semantic_results = (

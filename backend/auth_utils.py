@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict
 from jose import jwt, JWTError
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config.config import settings
@@ -17,7 +17,7 @@ SECRET_KEY = settings.JWT_SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """
@@ -56,11 +56,29 @@ def verify_token(token: str) -> Optional[Dict]:
         return None
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict:
+async def get_current_user(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> Dict:
     """
     FastAPI dependency to get current authenticated user from JWT token.
+    Supports both cookie-based auth (preferred) and Authorization header (fallback).
     """
-    token = credentials.credentials
+    token = None
+
+    # First, try to get token from cookie (preferred method)
+    token = request.cookies.get("auth_token")
+
+    # Fallback to Authorization header if cookie not present
+    if not token and credentials:
+        token = credentials.credentials
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated. Please log in.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     payload = verify_token(token)
 

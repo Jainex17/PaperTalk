@@ -1,26 +1,68 @@
 import asyncio
+import json
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from services.ai_service import AIService
+from services.context_builder import ContextBuilder
 from prompts import STRATEGY_GENERATION_PROMPT, SYNTHESIS_PROMPT_TEMPLATE
 from vector_store import query_documents_hybrid
 import logging
 
 logger = logging.getLogger(__name__)
 
+class SearchStrategy(BaseModel):
+    """Pydantic model for search strategy returned by LLM"""
+    reasoning: str = Field(..., description="Brief explanation of strategy")
+    searches: List[str] = Field(..., description="List of search queries to execute")
+    query_type: str = Field(..., description="Type of query: simple, complex, or analytical")
+    estimated_complexity: int = Field(..., ge=1, le=5, description="Complexity score from 1-5")
+
 class StrategyService:
     def __init__(self):
         self.ai_service = AIService()
-    
-    def generate_strategy(self, query: str) -> Optional[str]:
+
+    def generate_strategy(self, query: str, space_id: str) -> Optional[SearchStrategy]:
         """
         Generate search strategy using LLM
+        Returns a validated SearchStrategy object
         """
-
         prompt = STRATEGY_GENERATION_PROMPT.format(query=query)
         response = self.ai_service.generate_response(prompt)
-        
-        return response
+
+        if not response:
+            logger.error("Empty response from AI service")
+            return None
+
+        try:
+            # Try to extract JSON from the response (LLM might wrap it in markdown)
+            response_text = response.strip()
+
+            # Remove markdown code blocks if present
+            if response_text.startswith("```json"):
+                response_text = response_text[7:]
+            elif response_text.startswith("```"):
+                response_text = response_text[3:]
+
+            if response_text.endswith("```"):
+                response_text = response_text[:-3]
+
+            response_text = response_text.strip()
+
+            # Parse JSON and validate with Pydantic
+            strategy_dict = json.loads(response_text)
+            strategy = SearchStrategy(**strategy_dict)
+
+            logger.info(f"Successfully parsed strategy: {strategy.query_type} with {len(strategy.searches)} searches")
+            return strategy
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON response: {e}")
+            logger.error(f"Response text: {response[:500]}...")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to create SearchStrategy: {e}")
+            logger.error(f"Response text: {response[:500]}...")
+            return None
 
 class RetrievalService:
     
@@ -54,18 +96,27 @@ class RetrievalService:
             self._search_single(search, space_id, user_id, top_k)
             for search in searches
         ]
-        
+
         results = await asyncio.gather(*tasks)
+
+        # Map search queries to their results
+        search_results = {
+            search: result
+            for search, result in zip(searches, results)
+        }
+
+        return search_results
 
 class SynthesisService:
     def __init__(self):
         self.ai_service = AIService()
-    
+        self.context_builder = ContextBuilder()
+
     def synthesize_answer(
         self,
         query: str,
         search_results: Dict[str, List[Dict[str, Any]]],
-        strategy: Optional[str]
+        strategy: SearchStrategy
     ) -> Dict[str, Any]:
         """
         Synthesize final answer from all search results
@@ -76,10 +127,12 @@ class SynthesisService:
             all_chunks.extend(chunks)
 
         unique_chunks = self._deduplicate_chunks(all_chunks)
-        
-        context, sources, tokens = self.context_builder.build_context_for_synthesis(
+
+        # Build context using the specific query method (it handles token limits well)
+        context, sources, tokens = self.context_builder.build_context_for_specific_query(
             unique_chunks,
-            max_tokens=8000
+            max_tokens=8000,
+            distance_threshold=1.5  # More lenient for synthesis
         )
 
         prompt = SYNTHESIS_PROMPT_TEMPLATE.format(
@@ -95,10 +148,9 @@ class SynthesisService:
             "answer": answer,
             "sources": sources,
             "debug": {
-                "num_searches": len(strategy.searches),
-                "total_chunks": len(all_chunks),
-                "unique_chunks": len(unique_chunks),
-                "context_tokens": tokens
+                "context_tokens": tokens,
+                "chunks_used": len(unique_chunks),
+                "chunks_available": len(all_chunks)
             }
         }
     
@@ -130,6 +182,11 @@ class RAGPipeline:
         try:
             logger.info(f"Stage 1: Generating search strategy for query: {query}")
             strategy = self.strategy_service.generate_strategy(query, space_id)
+
+            if not strategy:
+                logger.error("Failed to generate search strategy")
+                raise ValueError("Failed to generate search strategy from LLM")
+
             logger.info(f"Generated {len(strategy.searches)} searches")
 
             logger.info("Stage 2: Executing parallel searches")
@@ -148,13 +205,7 @@ class RAGPipeline:
             )
             logger.info("Pipeline complete")
 
-            return {
-                **result,
-                "pipeline_metadata": {
-                    "strategy": strategy.dict(),
-                    "num_searches": len(strategy.searches)
-                }
-            }
+            return result
         except Exception as e:
             logger.error(f"Pipeline error: {str(e)}", exc_info=True)
             raise

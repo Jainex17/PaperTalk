@@ -23,81 +23,68 @@ export const getSpaceDetails = async (spaceId: string): Promise<SpaceDetails> =>
 };
 
 export const uploadDocument = async (spaceId: string, file: File): Promise<{ message: string }> => {
-  try {
-    const formData = new FormData();
-    formData.append('space_id', spaceId);
-    formData.append('file', file);
+  const formData = new FormData();
+  formData.append('space_id', spaceId);
+  formData.append('file', file);
 
-    const token = getAuthToken();
-    const headers: HeadersInit = {};
+  const token = getAuthToken();
+  const headers: HeadersInit = {};
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_URL}/documents/upload`, {
-      method: 'POST',
-      headers,
-      body: formData,
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      throw new Error('Upload failed');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Upload error:', error);
-    throw error;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
+
+  const response = await fetch(`${API_URL}/documents/upload`, {
+    method: 'POST',
+    headers,
+    body: formData,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: 'Upload failed' }));
+    throw new Error(errorData.detail || 'Upload failed');
+  }
+
+  return await response.json();
 };
 
 export const uploadText = async (spaceId: string, textContent: string): Promise<{ fileid: string; chunk_count: number; filename?: string }> => {
-  try {
-    const formData = new FormData();
-    formData.append('space_id', spaceId);
-    formData.append('text_content', textContent);
+  const formData = new FormData();
+  formData.append('space_id', spaceId);
+  formData.append('text_content', textContent);
 
-    const token = getAuthToken();
-    const headers: HeadersInit = {};
+  const token = getAuthToken();
+  const headers: HeadersInit = {};
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_URL}/documents/upload`, {
-      method: 'POST',
-      headers,
-      body: formData,
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Upload failed' }));
-      throw new Error(errorData.detail || 'Upload failed');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Text upload error:', error);
-    throw error;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
+
+  const response = await fetch(`${API_URL}/documents/upload`, {
+    method: 'POST',
+    headers,
+    body: formData,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: 'Upload failed' }));
+    throw new Error(errorData.detail || 'Upload failed');
+  }
+
+  return await response.json();
 };
 
 export const deleteDocument = async (spaceId: string, fileId: string): Promise<{ message: string }> => {
-  try {
-    const response = await authFetch(`/documents/${spaceId}/${encodeURIComponent(fileId)}`, {
-      method: 'DELETE',
-    });
+  const response = await authFetch(`/documents/${spaceId}/${encodeURIComponent(fileId)}`, {
+    method: 'DELETE',
+  });
 
-    if (!response.ok) {
-      throw new Error('Delete failed');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Delete error:', error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: 'Delete failed' }));
+    throw new Error(errorData.detail || 'Delete failed');
   }
+
+  return await response.json();
 };

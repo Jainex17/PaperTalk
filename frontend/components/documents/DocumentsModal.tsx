@@ -43,8 +43,9 @@ export function DocumentsModal({
 
       try {
         await onFileUpload(selectedFile);
-      } catch {
-        alert('Failed to upload file. Please try again.');
+      } catch (error) {
+        // Error is already handled in useDocuments hook with toast
+        // This catch prevents unhandled promise rejection
       }
 
       if (fileInputRef.current) {
@@ -55,12 +56,10 @@ export function DocumentsModal({
 
   const handleTextUpload = async () => {
     if (!textContent.trim()) {
-      alert('Please enter some text to upload.');
       return;
     }
 
     if (textContent.length > MAX_TEXT_CHARACTERS) {
-      alert(`Text exceeds maximum length of ${MAX_TEXT_CHARACTERS.toLocaleString()} characters.`);
       return;
     }
 
@@ -70,9 +69,6 @@ export function DocumentsModal({
       setTextContent('');
       setUploadMode('file');
       setShowUploadOptions(false);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upload text. Please try again.';
-      alert(errorMessage);
     } finally {
       setIsUploading(false);
     }
@@ -97,8 +93,6 @@ export function DocumentsModal({
       setDeletingDocId(documentToDelete.id);
       try {
         await onDeleteDocument(documentToDelete.id, documentToDelete.name);
-      } catch {
-        alert('Failed to delete document. Please try again.');
       } finally {
         setDeletingDocId(null);
         setDocumentToDelete(null);

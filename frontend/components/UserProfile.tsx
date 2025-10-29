@@ -14,7 +14,7 @@ export function UserProfile() {
   }
 
   const handleLogout = async () => {
-    logout();
+    await logout();
     router.push('/login');
   };
 

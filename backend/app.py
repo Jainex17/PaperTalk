@@ -8,7 +8,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from backend.services import better_retrieval_service
+from services import better_retrieval_service
 from config.config import settings
 from models import (
     AskRequest,
@@ -83,9 +83,11 @@ async def ask_question(
     body: AskRequest,
     current_user: dict = Depends(get_current_user)
 ) -> AskResponse:
+    _ = request
     try:
         user_id = current_user["user_id"]
-        result = await better_retrieval_service.RAGPipeline.process_query(
+        pipeline = better_retrieval_service.RAGPipeline()
+        result = await pipeline.process_query(
             query=body.query,
             space_id=body.space_id,
             user_id=user_id,
@@ -116,6 +118,7 @@ async def upload_document(
     text_content: str = Form(None),
     current_user: dict = Depends(get_current_user)
 ) -> UploadResponse:
+    _ = request
     try:
         user_id = current_user["user_id"]
 
@@ -162,6 +165,7 @@ async def upload_document(
 @app.get("/spaces", response_model=List[SpaceResponse], tags=["Spaces"])
 @limiter.limit("60/minute")  # 60 requests per minute per IP
 async def list_spaces(request: Request, current_user: dict = Depends(get_current_user)) -> List[SpaceResponse]:
+    _ = request
     try:
         user_id = current_user["user_id"]
         spaces = get_all_spaces(user_id)
@@ -182,6 +186,7 @@ async def get_space_details(
     space_id: str,
     current_user: dict = Depends(get_current_user)
 ) -> SpaceDetailsResponse:
+    _ = request
     try:
         user_id = current_user["user_id"]
 
@@ -229,6 +234,7 @@ async def rename_space(
     body: RenameSpaceRequest,
     current_user: dict = Depends(get_current_user)
 ) -> MessageResponse:
+    _ = request
     try:
         user_id = current_user["user_id"]
         success = update_space_name(space_id, body.new_name, user_id)
@@ -259,6 +265,7 @@ async def delete_space_endpoint(
     space_id: str,
     current_user: dict = Depends(get_current_user)
 ) -> MessageResponse:
+    _ = request
     try:
         user_id = current_user["user_id"]
         success = delete_space(space_id, user_id)
@@ -290,6 +297,7 @@ async def delete_document_endpoint(
     file_id: str,
     current_user: dict = Depends(get_current_user)
 ) -> MessageResponse:
+    _ = request
     try:
         user_id = current_user["user_id"]
         deleted_count = delete_document(space_id, file_id, user_id)

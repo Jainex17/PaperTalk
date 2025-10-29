@@ -54,6 +54,7 @@ async def google_callback(request: Request):
     """
     Handle Google OAuth callback.
     Exchanges authorization code for user info and creates/updates user.
+    Sets httpOnly cookie with JWT token.
     """
     try:
         google = await auth_service.get_google_oauth_client()
@@ -69,11 +70,24 @@ async def google_callback(request: Request):
         # Process user and create JWT token
         auth_data = auth_service.process_google_user(user_info)
 
-        # Redirect to frontend with token
+        # Redirect to frontend
         frontend_url = settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "http://localhost:3000"
-        redirect_url = f"{frontend_url}/auth/callback?token={auth_data['access_token']}"
+        redirect_url = f"{frontend_url}/auth/callback"
 
-        return RedirectResponse(url=redirect_url)
+        response = RedirectResponse(url=redirect_url)
+
+        # Set httpOnly cookie with JWT token
+        response.set_cookie(
+            key="auth_token",
+            value=auth_data['access_token'],
+            httponly=True,
+            samesite="lax",
+            secure=False,  # Set to True in production with HTTPS
+            path="/",
+            max_age=7 * 24 * 60 * 60  # 7 days in seconds
+        )
+
+        return response
 
     except Exception as e:
         logger.error(f"Error in Google callback: {str(e)}", exc_info=True)
@@ -107,7 +121,16 @@ async def get_me(request: Request, current_user: dict = Depends(get_current_user
 @router.post("/logout", response_model=MessageResponse)
 async def logout(current_user: dict = Depends(get_current_user)):
     """
-    Logout endpoint (token invalidation handled client-side).
+    Logout endpoint - clears the httpOnly auth cookie.
     """
     logger.info(f"User logged out: {current_user['email']}")
-    return MessageResponse(message="Successfully logged out")
+    response = JSONResponse(content={"message": "Successfully logged out"})
+
+    # Clear the auth cookie
+    response.delete_cookie(
+        key="auth_token",
+        path="/",
+        samesite="lax"
+    )
+
+    return response

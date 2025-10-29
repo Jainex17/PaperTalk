@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { API_URL } from '@/lib/config';
-import { getCookie, setCookie, deleteCookie } from '@/lib/api/client';
+import { deleteCookie } from '@/lib/api/client';
 
 interface User {
   id: string;
@@ -15,8 +15,8 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (token: string) => Promise<void>;
-  logout: () => void;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -28,50 +28,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing token in cookies
-    const savedToken = getCookie('auth_token');
-    if (savedToken) {
-      fetchUserProfile(savedToken);
-    } else {
-      setLoading(false);
-    }
+    // Attempt to fetch user profile if we might have a cookie
+    fetchUserProfile();
   }, []);
 
-  const fetchUserProfile = async (authToken: string, isNewLogin: boolean = false) => {
+  const fetchUserProfile = async () => {
     try {
       const response = await fetch(`${API_URL}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
+        credentials: 'include', // Include httpOnly cookie
       });
 
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-        setToken(authToken);
-        if (isNewLogin) {
-          setCookie('auth_token', authToken, 7);
-        }
+        // Token is now in httpOnly cookie, not accessible via JS
+        setToken('cookie'); // Placeholder to indicate authenticated state
       } else {
-        deleteCookie('auth_token');
         setToken(null);
         setUser(null);
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
-      deleteCookie('auth_token');
+      setToken(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (authToken: string) => {
+  const login = async () => {
     setLoading(true);
-    await fetchUserProfile(authToken, true);
+    await fetchUserProfile();
   };
 
-  const logout = () => {
-    deleteCookie('auth_token');
+  const logout = async () => {
+    try {
+      // Call backend logout endpoint to clear httpOnly cookie
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+
+    // Clear local state
+    deleteCookie('auth_token'); // Clean up any legacy cookies
     setToken(null);
     setUser(null);
   };

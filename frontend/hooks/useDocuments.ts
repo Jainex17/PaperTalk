@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Document } from '@/types';
 import { getSpaceDetails, uploadDocument as uploadDocumentAPI, uploadText as uploadTextAPI, deleteDocument as deleteDocumentAPI } from '@/lib/api/documents';
 import { getFileType } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export const useDocuments = (spaceId: string) => {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -56,10 +57,14 @@ export const useDocuments = (spaceId: string) => {
             : doc
         )
       );
+
+      toast.success('File uploaded successfully');
     } catch (error) {
       console.error('Upload error:', error);
       setDocuments(prev => prev.filter(doc => doc.name !== file.name));
-      throw error;
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload file';
+      toast.error(errorMessage);
     }
   };
 
@@ -87,10 +92,14 @@ export const useDocuments = (spaceId: string) => {
             : doc
         )
       );
+
+      toast.success('Text uploaded successfully');
     } catch (error) {
       console.error('Text upload error:', error);
       setDocuments(prev => prev.filter(doc => doc.name !== tempName));
-      throw error;
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload text';
+      toast.error(errorMessage);
     }
   };
 
@@ -98,9 +107,11 @@ export const useDocuments = (spaceId: string) => {
     try {
       await deleteDocumentAPI(spaceId, documentId);
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      toast.success('Document deleted successfully');
     } catch (error) {
       console.error('Delete error:', error);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete document';
+      toast.error(errorMessage);
     }
   };
 
