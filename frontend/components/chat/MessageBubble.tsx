@@ -41,15 +41,15 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   };
 
   const markdownComponents = {
-    h1: ({ ...props }) => <h1 className="text-2xl font-bold mt-4 mb-2 text-foreground" {...props} />,
-    h2: ({ ...props }) => <h2 className="text-xl font-bold mt-3 mb-2 text-foreground" {...props} />,
-    h3: ({ ...props }) => <h3 className="text-lg font-bold mt-2 mb-1 text-foreground" {...props} />,
-    strong: ({ ...props }) => <strong className="font-bold text-foreground" {...props} />,
-    ul: ({ ...props }) => <ul className="list-disc ml-5 my-2 space-y-1" {...props} />,
-    ol: ({ ...props }) => <ol className="list-decimal ml-5 my-2 space-y-1" {...props} />,
-    li: ({ ...props }) => <li className="leading-relaxed text-foreground" {...props} />,
-    p: ({ ...props }) => <p className="leading-relaxed mb-2 text-foreground" {...props} />,
-    hr: ({ ...props }) => <hr className="my-4 border-border" {...props} />,
+    h1: ({ ...props }) => <h1 className="text-2xl font-bold mt-6 mb-3 text-foreground leading-tight" {...props} />,
+    h2: ({ ...props }) => <h2 className="text-xl font-bold mt-5 mb-3 text-foreground leading-tight" {...props} />,
+    h3: ({ ...props }) => <h3 className="text-lg font-semibold mt-4 mb-2 text-foreground leading-snug" {...props} />,
+    strong: ({ ...props }) => <strong className="font-semibold text-foreground" {...props} />,
+    ul: ({ ...props }) => <ul className="list-disc ml-6 my-4 space-y-3" {...props} />,
+    ol: ({ ...props }) => <ol className="list-decimal ml-6 my-4 space-y-3" {...props} />,
+    li: ({ ...props }) => <li className="leading-relaxed text-foreground pl-2" {...props} />,
+    p: ({ ...props }) => <p className="leading-relaxed mb-4 text-foreground" {...props} />,
+    hr: ({ ...props }) => <hr className="my-6 border-border" {...props} />,
     table: ({ ...props }) => (
       <div className="overflow-x-auto my-4">
         <table {...props} />
@@ -77,7 +77,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const renderMessageWithCitations = (content: string, sources?: Source[]) => {
     if (!sources || sources.length === 0) {
       return (
-        <div className="text-sm markdown-table">
+        <div className="text-[15px] markdown-table">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={markdownComponents}
@@ -172,7 +172,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         const paraData = paragraphsWithCitations[currentParagraphIndex] || { text: '', citations: [] };
 
         return (
-          <p className="my-2 leading-relaxed text-foreground" {...props}>
+          <p className="mb-4 leading-relaxed text-foreground" {...props}>
             {children}
             {paraData.citations.length > 0 && (
               <span className="inline">
@@ -199,7 +199,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     };
 
     return (
-      <div className="text-sm markdown-table">
+      <div className="text-[15px] markdown-table">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={markdownComponentsWithCitations}
@@ -221,7 +221,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           }`}
         >
           {message.type === 'user' ? (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{message.content}</p>
+            <p className="whitespace-pre-wrap text-[15px] leading-relaxed font-sans">{message.content}</p>
           ) : (
             renderMessageWithCitations(message.content, message.sources)
           )}

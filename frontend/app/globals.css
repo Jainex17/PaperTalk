@@ -192,6 +192,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  line-height: 1.6;
 }
 
 .markdown-table table {
@@ -238,4 +239,26 @@ body {
 .citation-nbsp {
   display: inline-block;
   width: 0.15em;
+}
+
+/* Enhanced numbered list styling with line breaks */
+.markdown-table ol > li {
+  margin-bottom: 1.5rem;
+}
+
+/* Style for nested paragraphs within list items */
+.markdown-table ol > li > p {
+  margin-left: 0;
+  margin-bottom: 0.75rem;
+}
+
+.markdown-table ol > li > p:first-child {
+  margin-bottom: 0.5rem;
+}
+
+/* Increase spacing between list items */
+.markdown-table ul > li,
+.markdown-table ol > li {
+  margin-bottom: 1rem;
+  line-height: 1.7;
 }

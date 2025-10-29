@@ -14,8 +14,22 @@ FORMATTING RULES (CRITICAL - Follow exactly):
 - Always place bullet points on separate lines AFTER the heading
 - Use blank lines to separate sections
 - Structure must be: Heading → newline → bullet list
+- For numbered lists, use proper markdown format (1., 2., 3., etc.) with line breaks
 
-Good formatting example:
+Good formatting examples:
+
+**With Numbered List:**
+## Main Topic
+
+1. **First Point:**
+
+   Detailed explanation here.
+
+2. **Second Point:**
+
+   More details here.
+
+**With Bullet List:**
 ## Main Topic
 Brief intro paragraph.
 
@@ -26,6 +40,7 @@ Brief intro paragraph.
 
 Bad formatting (DO NOT DO THIS):
 ### Subsection - **Point 1**: details - **Point 2**: details
+**1. Point:** description on same line
 
 DOCUMENTS:
 {context}
@@ -52,12 +67,26 @@ FORMATTING RULES (CRITICAL - Follow exactly):
 - Always place bullet points on separate lines AFTER the heading
 - Use blank lines to separate sections
 - Structure must be: Heading → newline → bullet list
+- For numbered lists, use proper markdown format (1., 2., 3., etc.)
 - For nested sub-points, place each on a NEW LINE with proper indentation:
   - Main bullet point
     - Sub-point (indent with 2 spaces)
     - Another sub-point
 
-Good formatting example:
+Good formatting examples:
+
+**Numbered List:**
+1. **First Item Title:**
+
+   Detailed explanation or description here.
+
+   Additional context or examples.
+
+2. **Second Item Title:**
+
+   More detailed explanation here.
+
+**Bullet List:**
 ### Key Concepts
 - **Concept A**: Detailed explanation here
   - Sub-point for Concept A on new line
@@ -67,6 +96,7 @@ Good formatting example:
 
 Bad formatting (DO NOT DO THIS):
 ### Key Concepts - **Concept A**: explanation - Sub-point: detail
+**1. Item:** description on same line
 
 CITATION RULES (CRITICAL):
 - ONLY place citations at the END of complete paragraphs or sections
@@ -132,6 +162,7 @@ FORMATTING RULES (CRITICAL - Follow exactly):
 - Always place bullet points on separate lines AFTER the heading
 - Use blank lines to separate sections
 - Structure must be: Heading → newline → bullet list
+- For numbered lists, use proper markdown format (1., 2., 3., etc.) with line breaks
 
 RESPONSE:"""
 
@@ -160,12 +191,29 @@ FORMATTING RULES (CRITICAL - Follow exactly):
 - Always place bullet points on separate lines AFTER the heading
 - Use blank lines to separate sections
 - Structure must be: Heading → newline → bullet list
+- For numbered lists, use proper markdown format (1., 2., 3., etc.) with line breaks
 - For nested sub-points, place each on a NEW LINE with proper indentation:
   - Main bullet point
     - Sub-point (indent with 2 spaces)
     - Another sub-point
 
-Good formatting example:
+Good formatting examples:
+
+**Numbered List:**
+### Recommendations
+
+1. **First recommendation:**
+
+   Details here with supporting information.
+
+   - Supporting detail as sub-point
+   - Another detail as sub-point
+
+2. **Second recommendation:**
+
+   More details here.
+
+**Bullet List:**
 ### Recommendations
 - **First recommendation**: Details here
   - Supporting detail on new line
@@ -175,6 +223,7 @@ Good formatting example:
 
 Bad formatting (DO NOT DO THIS):
 ### Recommendations - **First**: details - Detail: more
+**1. Recommendation:** details on same line
 
 CITATION RULES (CRITICAL):
 - ONLY place citations at the END of complete paragraphs or sections
