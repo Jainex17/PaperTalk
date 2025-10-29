@@ -132,3 +132,53 @@ Focus on:
 Be specific and include person names and their key characteristics.
 
 EXTRACTED KEY INFORMATION:"""
+
+
+STRATEGY_GENERATION_PROMPT = """
+You are a search strategy expert. Analyze the user's question and generate an optimal search strategy.
+
+User Question: {query}
+
+Tasks:
+1. Determine query complexity (simple, complex, analytical)
+2. Generate 1-5 focused search queries that together will answer the question
+3. For each search, explain what aspect it covers
+
+Guidelines:
+- Simple factual questions → 1-2 searches
+- Multi-aspect questions → 3-4 searches
+- Complex analytical questions → 4-5 searches
+- Each search should be distinct and focused
+
+Return JSON:
+{{
+    "reasoning": "Brief explanation of strategy",
+    "searches": ["search query 1", "search query 2", ...],
+    "query_type": "simple|complex|analytical",
+    "estimated_complexity": 1-5
+}}
+"""
+
+SYNTHESIS_PROMPT_TEMPLATE = """
+You are synthesizing information from multiple searches to answer a user's question comprehensively.
+
+Original Question: {original_query}
+
+Search Strategy Used:
+{strategy_reasoning}
+
+Individual Searches Performed:
+{search_queries}
+
+Retrieved Context:
+{context}
+
+Instructions:
+1. Synthesize a comprehensive answer that addresses all aspects of the question
+2. Integrate information from different sources naturally
+3. Use inline citations [Source N] for all claims
+4. If sources conflict, acknowledge different perspectives
+5. Structure the answer logically (use markdown headers/lists if helpful)
+
+Generate a well-structured, comprehensive answer:
+"""

@@ -18,9 +18,8 @@ trap cleanup SIGINT SIGTERM
 # Start backend
 echo -e "${GREEN}[Backend]${NC} Starting FastAPI server..."
 (
-    source venv/bin/activate
     cd backend
-    uvicorn app:app --reload --port 8000
+    uv run uvicorn app:app --reload --port 8000
 ) &
 
 # Start frontend

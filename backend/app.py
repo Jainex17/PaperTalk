@@ -8,6 +8,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+from backend.services import better_retrieval_service
 from config.config import settings
 from models import (
     AskRequest,
@@ -84,8 +85,12 @@ async def ask_question(
 ) -> AskResponse:
     try:
         user_id = current_user["user_id"]
-        result = query_service.process_query(body.space_id, body.query, body.is_first_message, user_id)
-        return AskResponse(**result)
+        result = await better_retrieval_service.RAGPipeline.process_query(
+            query=body.query,
+            space_id=body.space_id,
+            user_id=user_id,
+        )
+        return result
 
     except ValueError as e:
         logger.warning(f"Invalid query: {str(e)}")
