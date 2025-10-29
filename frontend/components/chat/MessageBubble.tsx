@@ -98,31 +98,36 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     });
 
     // Process content to replace citation markers with placeholders
-    // Support both old format: (Source 1, Source 2) and new format: [cite:1,2,3]
-    const oldCitationRegex = /\(Source (\d+(?:,\s*Source \d+)*)\)/g;
-    const newCitationRegex = /\[cite:(\d+(?:,\s*\d+)*)\]/g;
+    // Universal citation parser - handles any format with numbers
     const citationPositions = new Map<string, number[]>();
     let citationCounter = 0;
-
-    // Replace both citation formats with unique placeholders
     let processedContent = content;
 
-    // Replace new format [cite:1,2,3]
-    processedContent = processedContent.replace(newCitationRegex, (_match, sourceList) => {
-      const sourceNumbers = sourceList.split(',').map((s: string) => parseInt(s.trim()));
-      const placeholder = `__CITATION_${citationCounter}__`;
-      citationPositions.set(placeholder, sourceNumbers);
-      citationCounter++;
-      return placeholder;
-    });
+    // Universal regex that matches any citation-like pattern
+    // Matches: [Source 1], [Source 1, Source 2], (Source 1), [cite:1,2,3], etc.
+    const universalCitationRegex = /[\[\(]([^\[\]\(\)]+)[\]\)]/g;
 
-    // Replace old format (Source 1, Source 2)
-    processedContent = processedContent.replace(oldCitationRegex, (_match, sourceList) => {
-      const sourceNumbers = sourceList.match(/\d+/g)?.map(Number) || [];
-      const placeholder = `__CITATION_${citationCounter}__`;
-      citationPositions.set(placeholder, sourceNumbers);
-      citationCounter++;
-      return placeholder;
+    processedContent = processedContent.replace(universalCitationRegex, (match, content) => {
+      // Check if this looks like a citation (contains "Source", "cite:", or just numbers)
+      const isCitation = /(?:Source|cite:|^\s*\d+)/i.test(content);
+
+      if (!isCitation) {
+        return match; // Not a citation, keep original
+      }
+
+      // Extract all numbers from the matched text
+      const sourceNumbers = content.match(/\d+/g)?.map(Number) || [];
+
+      // Only treat as citation if we found valid numbers
+      if (sourceNumbers.length > 0) {
+        const placeholder = `__CITATION_${citationCounter}__`;
+        citationPositions.set(placeholder, sourceNumbers);
+        citationCounter++;
+        return placeholder;
+      }
+
+      // If no valid numbers found, return original text
+      return match;
     });
 
     // Extract citations from end of paragraphs only

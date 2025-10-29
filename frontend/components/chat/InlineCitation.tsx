@@ -122,7 +122,7 @@ export function InlineCitation({ filename, sources, onClick }: InlineCitationPro
           </h4>
           {sources.length > 1 && (
             <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded flex-shrink-0">
-              {sources.length} chunks
+              {sources.length} sections
             </span>
           )}
         </div>
