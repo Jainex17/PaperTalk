@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str
     JWT_SECRET_KEY: str
     OPENROUTER_API_KEY: str
+    OPENROUTER_API_KEY1: str = ""
 
 try:
     settings = Settings()

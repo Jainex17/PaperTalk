@@ -6,8 +6,26 @@ INSTRUCTIONS:
 - For creative tasks (posts, summaries, ideas): extract key insights from documents and fulfill the request
 - For analytical tasks: synthesize information, identify patterns and themes across documents
 - If the documents don't contain relevant information, acknowledge this but offer what insights you can derive from available content
-- Use proper markdown formatting to structure your response clearly
 - Make the response natural, relevant, and easy to read
+
+FORMATTING RULES (CRITICAL - Follow exactly):
+- Use ## for main sections, ### for subsections
+- NEVER put list items on the same line as headings
+- Always place bullet points on separate lines AFTER the heading
+- Use blank lines to separate sections
+- Structure must be: Heading → newline → bullet list
+
+Good formatting example:
+## Main Topic
+Brief intro paragraph.
+
+### Subsection Name
+- First point with details
+- Second point with details
+- Third point with details
+
+Bad formatting (DO NOT DO THIS):
+### Subsection - **Point 1**: details - **Point 2**: details
 
 DOCUMENTS:
 {context}
@@ -26,18 +44,46 @@ INSTRUCTIONS:
 - If the query asks to create/write/generate something and context is available, use it creatively
 - Only say "cannot be answered" if the context is completely irrelevant AND the query is a factual question
 - For creative requests (write, create, generate), use available context as inspiration
-- Place citations at paragraph ends using [cite:1] or [cite:1,2,3] format (see examples below)
-- Use proper markdown formatting to structure your response clearly
 - Make the response well-organized and easy to read
 
-EXAMPLES:
-Good:
-"The paper discusses RAG architectures and their evolution. It covers naive RAG, advanced RAG, and modular RAG paradigms. The analysis includes retrieval, generation, and augmentation stages.[cite:1,2,3]
+FORMATTING RULES (CRITICAL - Follow exactly):
+- Use ## for main sections, ### for subsections
+- NEVER put list items on the same line as headings
+- Always place bullet points on separate lines AFTER the heading
+- Use blank lines to separate sections
+- Structure must be: Heading → newline → bullet list
+- For nested sub-points, place each on a NEW LINE with proper indentation:
+  - Main bullet point
+    - Sub-point (indent with 2 spaces)
+    - Another sub-point
 
-Advanced RAG introduces several improvements over naive RAG. These include pre-retrieval and post-retrieval strategies that enhance retrieval quality.[cite:1,4]"
+Good formatting example:
+### Key Concepts
+- **Concept A**: Detailed explanation here
+  - Sub-point for Concept A on new line
+  - Another sub-point for Concept A
+- **Concept B**: More details here
+  - Sub-point for Concept B on new line
 
-Bad (don't do this):
-"The paper discusses RAG architectures[cite:1] and their evolution[cite:2]. It covers naive RAG[cite:1]..."
+Bad formatting (DO NOT DO THIS):
+### Key Concepts - **Concept A**: explanation - Sub-point: detail
+
+CITATION RULES (CRITICAL):
+- ONLY place citations at the END of complete paragraphs or sections
+- NEVER place citations in the middle of text
+- Use [cite:1] or [cite:1,2,3] format
+- Group all sources for a paragraph together at the end
+
+CITATION EXAMPLES:
+✓ CORRECT:
+"Pre-training and Fine-tuning: BERT undergoes a two-step process. During pre-training, BERT is exposed to a large corpus of text to learn general language representations. It consists of two tasks:
+- Masked Language Model (MLM): Where 15% of the tokens in each input are masked, and the model learns to predict these masked words.
+- Next Sentence Prediction (NSP): Which involves determining whether a given sentence B follows sentence A in the original document.
+
+In the fine-tuning phase, BERT adapts these pre-trained representations for a particular NLP task by further training on labeled data specific to the task.[cite:4,5,6,13]"
+
+✗ WRONG (don't do this):
+"BERT is exposed to text [cite:4]. It consists of two tasks [cite:5]: - Masked Language Model [cite:5] - Next Sentence Prediction [cite:13]"
 
 CONTEXT:
 {context}
@@ -79,7 +125,13 @@ INSTRUCTIONS:
 - If the user wants reformatting, reformat the previous response accordingly
 - If the user wants clarification, explain based on previous context
 - Keep your response concise and relevant
-- Use proper markdown formatting to structure your response clearly
+
+FORMATTING RULES (CRITICAL - Follow exactly):
+- Use ## for main sections, ### for subsections
+- NEVER put list items on the same line as headings
+- Always place bullet points on separate lines AFTER the heading
+- Use blank lines to separate sections
+- Structure must be: Heading → newline → bullet list
 
 RESPONSE:"""
 
@@ -100,18 +152,44 @@ INSTRUCTIONS:
 - Extract key information from source document(s)
 - Apply or connect that information with content from target document(s)
 - Provide a clear, actionable response that bridges both documents
-- Place citations at paragraph ends using [cite:1] or [cite:1,2,3] format (see examples below)
-- Use proper markdown formatting to structure your response clearly
 - Organize the response logically and make it easy to scan
 
-EXAMPLES:
-Good:
-"The candidate has 5 years of experience in machine learning and strong Python skills. Their background aligns well with the role requirements.[cite:1,2]
+FORMATTING RULES (CRITICAL - Follow exactly):
+- Use ## for main sections, ### for subsections
+- NEVER put list items on the same line as headings
+- Always place bullet points on separate lines AFTER the heading
+- Use blank lines to separate sections
+- Structure must be: Heading → newline → bullet list
+- For nested sub-points, place each on a NEW LINE with proper indentation:
+  - Main bullet point
+    - Sub-point (indent with 2 spaces)
+    - Another sub-point
 
-Based on this profile, the recommended learning path includes advanced deep learning courses and specialized NLP training. Focus should be on transformer architectures and large language models.[cite:3,4]"
+Good formatting example:
+### Recommendations
+- **First recommendation**: Details here
+  - Supporting detail on new line
+  - Another detail on new line
+- **Second recommendation**: More details
+  - Supporting detail here
 
-Bad (don't do this):
-"The candidate has 5 years of experience[cite:1] in machine learning[cite:2]..."
+Bad formatting (DO NOT DO THIS):
+### Recommendations - **First**: details - Detail: more
+
+CITATION RULES (CRITICAL):
+- ONLY place citations at the END of complete paragraphs or sections
+- NEVER place citations in the middle of text
+- Use [cite:1] or [cite:1,2,3] format
+- Group all sources for a paragraph together at the end
+
+CITATION EXAMPLES:
+✓ CORRECT:
+"The candidate has 5 years of experience in machine learning and strong Python skills. Their background includes work on NLP projects and transformer models. They have published papers on attention mechanisms and contributed to open-source ML frameworks.
+
+Based on this profile, the recommended learning path includes advanced deep learning courses and specialized NLP training. Focus should be on transformer architectures, large language models, and production deployment strategies.[cite:1,2,3,4]"
+
+✗ WRONG (don't do this):
+"The candidate has 5 years of experience[cite:1] in machine learning[cite:2] and strong Python skills[cite:1]..."
 
 RESPONSE:"""
 
