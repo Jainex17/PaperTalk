@@ -11,17 +11,29 @@ from auth_utils import create_access_token
 
 logger = logging.getLogger(__name__)
 
-required_settings = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]
-missing = [s for s in required_settings if not getattr(settings, s, None)]
-if missing:
-    raise RuntimeError(f"Missing required OAuth settings: {', '.join(missing)}")
+def get_oauth_config():
+    """Get OAuth configuration, validating settings first"""
+    required_settings = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]
+    missing = [s for s in required_settings if not getattr(settings, s, None)]
+    if missing:
+        raise RuntimeError(f"Missing required OAuth settings: {', '.join(missing)}")
+    
+    config = Config(environ={
+        "GOOGLE_CLIENT_ID": settings.GOOGLE_CLIENT_ID,
+        "GOOGLE_CLIENT_SECRET": settings.GOOGLE_CLIENT_SECRET,
+    })
+    
+    return OAuth(config)
 
-config = Config(environ={
-    "GOOGLE_CLIENT_ID": settings.GOOGLE_CLIENT_ID,
-    "GOOGLE_CLIENT_SECRET": settings.GOOGLE_CLIENT_SECRET,
-})
+# Defer OAuth initialization until first use
+_oauth = None
 
-oauth = OAuth(config)
+def get_oauth():
+    """Get OAuth instance, creating it if necessary"""
+    global _oauth
+    if _oauth is None:
+        _oauth = get_oauth_config()
+    return _oauth
 
 class AuthService:
     """Service for handling Google OAuth authentication."""
@@ -45,6 +57,7 @@ class AuthService:
 
     @classmethod
     def register_google_oauth(cls):
+        oauth = get_oauth()
         oauth.register(
             name='google',
             server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
@@ -54,16 +67,10 @@ class AuthService:
             client=cls.get_httpx_client()
         )
 
-# Register Google OAuth when the module is loaded
-AuthService.register_google_oauth()
-
-
-class AuthService:
-    """Service for handling Google OAuth authentication."""
-
     @staticmethod
     async def get_google_oauth_client():
         """Get configured Google OAuth client."""
+        oauth = get_oauth()
         return oauth.google
 
     @staticmethod
@@ -118,3 +125,6 @@ class AuthService:
         except Exception as e:
             logger.error(f"Error processing Google user: {str(e)}", exc_info=True)
             raise
+
+# Register Google OAuth when the module is loaded
+AuthService.register_google_oauth()

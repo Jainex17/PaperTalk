@@ -26,7 +26,17 @@ def get_embed_model():
         logger.info("Embedding model loaded")
     return _embed_model
 
-genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+# Lazy load Gemini client
+_genai_client = None
+
+def get_genai_client():
+    """Get Gemini client, creating it if necessary"""
+    global _genai_client
+    if _genai_client is None:
+        logger.info("Creating Gemini client (first use)...")
+        _genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        logger.info("Gemini client created")
+    return _genai_client
 
 def upload_document(chunks: List[str], space_id: str, user_id: str, filename: str = None) -> str:
     file_id = str(uuid.uuid4())
@@ -186,6 +196,7 @@ def classify_query(query: str) -> str:
     try:
         classification_prompt = CLASSIFICATION_PROMPT_TEMPLATE.format(query=query)
 
+        genai_client = get_genai_client()
         response = genai_client.models.generate_content(
             model="gemini-2.0-flash",
             contents=classification_prompt,

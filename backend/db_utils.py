@@ -11,29 +11,50 @@ from config.config import settings
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = settings.DATABASE_URL
-
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    connect_args={
-        "connect_timeout": 10,
-        "keepalives": 1,
-        "keepalives_idle": 30,
-        "keepalives_interval": 10,
-        "keepalives_count": 5,
-    }
-)
-
-SessionLocal = sessionmaker(bind=engine)
+# Defer database connection until first use
+_engine = None
+_SessionLocal = None
 Base = declarative_base()
+
+def get_engine():
+    """Get database engine, creating it if necessary"""
+    global _engine
+    if _engine is None:
+        try:
+            DATABASE_URL = settings.DATABASE_URL
+            logger.info("Creating database engine...")
+            _engine = create_engine(
+                DATABASE_URL,
+                pool_size=10,
+                max_overflow=20,
+                pool_pre_ping=True,
+                pool_recycle=3600,
+                connect_args={
+                    "connect_timeout": 10,
+                    "keepalives": 1,
+                    "keepalives_idle": 30,
+                    "keepalives_interval": 10,
+                    "keepalives_count": 5,
+                }
+            )
+            logger.info("Database engine created successfully")
+        except Exception as e:
+            logger.error(f"Failed to create database engine: {e}")
+            raise
+    return _engine
+
+def get_session_local():
+    """Get session maker, creating it if necessary"""
+    global _SessionLocal
+    if _SessionLocal is None:
+        engine = get_engine()
+        _SessionLocal = sessionmaker(bind=engine)
+    return _SessionLocal
 
 
 @contextmanager
 def get_db_session():
+    SessionLocal = get_session_local()
     session = SessionLocal()
     try:
         yield session
