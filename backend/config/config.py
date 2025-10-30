@@ -11,14 +11,21 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    # Required for core functionality
     GEMINI_API_KEY: str
     DATABASE_URL: str
-    FRONTEND_URL: str
-    BACKEND_URL: str
+    JWT_SECRET_KEY: str
+    
+    # Required for OAuth
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
-    JWT_SECRET_KEY: str
+    
+    # Required for API calls
     OPENROUTER_API_KEY: str
+    
+    # Optional with defaults
+    FRONTEND_URL: str = "http://localhost:3000"
+    BACKEND_URL: str = "http://localhost:8000"
     OPENROUTER_API_KEY1: str = ""
 
 try:
