@@ -96,7 +96,6 @@ class Document(Base):
         Index('ix_documents_space_id_embedding', 'space_id', 'embedding', postgresql_using='ivfflat', postgresql_ops={'embedding': 'vector_l2_ops'}),
     )
 
-Base.metadata.create_all(engine)
 
 def get_all_spaces(user_id: str) -> List[Dict[str, str]]:
     with get_db_session() as session:
