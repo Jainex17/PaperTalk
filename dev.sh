@@ -2,7 +2,7 @@
 
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 echo -e "${BLUE}Starting PaperTalk development servers...${NC}"
 
@@ -19,6 +19,7 @@ trap cleanup SIGINT SIGTERM
 echo -e "${GREEN}[Backend]${NC} Starting FastAPI server..."
 (
     cd backend
+    source .venv/bin/activate
     uv run uvicorn app:app --reload --port 8000
 ) &
 
