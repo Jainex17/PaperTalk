@@ -2,6 +2,9 @@
 
 Ask questions about your PDFs. Get answers with sources.
 
+## Demo
+https://github.com/user-attachments/assets/432e0a66-9c9b-424d-aeaf-b980f5cdc5be
+
 ## What it is
 
 PaperTalk lets you upload PDFs/TXT into personal Spaces and chat with them. Under the hood it uses retrieval-augmented generation (semantic search + an LLM) so answers stay grounded in your documents, with citations.
