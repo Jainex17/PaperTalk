@@ -22,11 +22,12 @@ class AIService:
                 api_key=settings.OPENROUTER_API_KEY1
             )
 
-    def generate_response(self, prompt: str) -> Optional[str]:
+    def generate_response(self, prompt: str, max_tokens: int = 2000) -> Optional[str]:
         try:
             response = self.client.chat.completions.create(
-                model="openai/gpt-4o",
-                messages=[{"role": "user", "content": prompt}]
+                model="openai/gpt-oss-20b:free",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens
             )
 
             if not response or not response.choices[0].message.content:
@@ -43,8 +44,9 @@ class AIService:
                 logger.info("Attempting to use fallback OpenRouter API key...")
                 try:
                     response = self.fallback_client.chat.completions.create(
-                        model="openai/gpt-4o",
-                        messages=[{"role": "user", "content": prompt}]
+                        model="openai/gpt-oss-20b:free",
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=max_tokens
                     )
 
                     if not response or not response.choices[0].message.content:

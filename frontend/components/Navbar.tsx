@@ -12,7 +12,7 @@ export default function Navbar() {
     <nav className="w-full px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center">
-          <Image src={logo} alt="PaperTalk" className="object-contain" />
+          <Image src={logo} alt="PaperTalk" width={68} height={68} className="object-contain w-full h-full" />
         </div>
         <span className="text-xl font-semibold text-foreground">PaperTalk</span>
       </div>
