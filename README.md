@@ -14,7 +14,6 @@ PaperTalk lets you upload PDFs/TXT into personal Spaces and chat with them. Unde
 - Upload PDFs or text to a Space
 - Ask natural-language questions and get cited answers
 - Compare info across multiple docs in one go
-- Keep chat history per Space
 - Sign in with Google; your data stays in your account
 
 ## How it works (quickly)
