@@ -1,68 +1,74 @@
 import asyncio
-import json
-from typing import List, Dict, Any, Optional
+import re
+from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 from services.ai_service import AIService
 from services.context_builder import ContextBuilder
-from prompts import STRATEGY_GENERATION_PROMPT, SYNTHESIS_PROMPT_TEMPLATE
-from vector_store import query_documents_hybrid
+from prompts import SYNTHESIS_PROMPT_TEMPLATE
+from vector_store import query_documents_hybrid, expand_query
 import logging
 
 logger = logging.getLogger(__name__)
 
 class SearchStrategy(BaseModel):
-    """Pydantic model for search strategy returned by LLM"""
+    """Search strategy used to run retrieval."""
     reasoning: str = Field(..., description="Brief explanation of strategy")
     searches: List[str] = Field(..., description="List of search queries to execute")
     query_type: str = Field(..., description="Type of query: simple, complex, or analytical")
     estimated_complexity: int = Field(..., ge=1, le=5, description="Complexity score from 1-5")
 
 class StrategyService:
-    def __init__(self):
-        self.ai_service = AIService()
+    STOPWORDS = {
+        "the", "a", "an", "is", "are", "was", "were", "to", "of", "in", "on", "for",
+        "and", "or", "with", "from", "what", "which", "who", "how", "why", "when",
+        "can", "could", "would", "should", "please", "about", "tell", "explain",
+    }
 
-    def generate_strategy(self, query: str, space_id: str) -> Optional[SearchStrategy]:
+    def generate_strategy(self, query: str, space_id: str) -> SearchStrategy:
         """
-        Generate search strategy using LLM
-        Returns a validated SearchStrategy object
+        Generate a deterministic strategy.
+        This removes an extra LLM call from the hot path while keeping recall-oriented search.
         """
-        prompt = STRATEGY_GENERATION_PROMPT.format(query=query)
-        response = self.ai_service.generate_response(prompt)
+        normalized = " ".join(query.split())
+        expanded = expand_query(normalized)
+        keyword_focus = self._extract_keywords(normalized)
 
-        if not response:
-            logger.error("Empty response from AI service")
-            return None
+        searches = [normalized]
+        if expanded != normalized:
+            searches.append(expanded)
+        if keyword_focus and keyword_focus != normalized:
+            searches.append(keyword_focus)
 
-        try:
-            # Try to extract JSON from the response (LLM might wrap it in markdown)
-            response_text = response.strip()
+        # Strong recall bias for complex prompts: include a broad natural-language variant.
+        if len(normalized.split()) >= 12:
+            searches.append(f"key points and evidence about {normalized}")
 
-            # Remove markdown code blocks if present
-            if response_text.startswith("```json"):
-                response_text = response_text[7:]
-            elif response_text.startswith("```"):
-                response_text = response_text[3:]
+        # Deduplicate and cap to keep latency predictable.
+        deduped = []
+        seen = set()
+        for s in searches:
+            stripped = s.strip()
+            if stripped and stripped not in seen:
+                deduped.append(stripped)
+                seen.add(stripped)
 
-            if response_text.endswith("```"):
-                response_text = response_text[:-3]
+        query_type = "simple" if len(normalized.split()) <= 6 else "complex"
+        if len(deduped) >= 4:
+            query_type = "analytical"
 
-            response_text = response_text.strip()
+        strategy = SearchStrategy(
+            reasoning="Deterministic high-recall query expansion without extra LLM round-trip.",
+            searches=deduped[:4],
+            query_type=query_type,
+            estimated_complexity=min(5, max(1, len(deduped) + 1)),
+        )
+        logger.info(f"Built strategy: {strategy.query_type} with {len(strategy.searches)} searches")
+        return strategy
 
-            # Parse JSON and validate with Pydantic
-            strategy_dict = json.loads(response_text)
-            strategy = SearchStrategy(**strategy_dict)
-
-            logger.info(f"Successfully parsed strategy: {strategy.query_type} with {len(strategy.searches)} searches")
-            return strategy
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON response: {e}")
-            logger.error(f"Response text: {response[:500]}...")
-            return None
-        except Exception as e:
-            logger.error(f"Failed to create SearchStrategy: {e}")
-            logger.error(f"Response text: {response[:500]}...")
-            return None
+    def _extract_keywords(self, query: str) -> str:
+        tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]{2,}", query.lower())
+        keywords = [t for t in tokens if t not in self.STOPWORDS]
+        return " ".join(keywords[:8])
 
 class RetrievalService:
     
@@ -180,12 +186,8 @@ class RAGPipeline:
         Main pipeline execution
         """
         try:
-            logger.info(f"Stage 1: Generating search strategy for query: {query}")
+            logger.info(f"Stage 1: Building retrieval strategy for query: {query}")
             strategy = self.strategy_service.generate_strategy(query, space_id)
-
-            if not strategy:
-                logger.error("Failed to generate search strategy")
-                raise ValueError("Failed to generate search strategy from LLM")
 
             logger.info(f"Generated {len(strategy.searches)} searches")
 

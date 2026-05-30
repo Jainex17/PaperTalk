@@ -61,6 +61,7 @@ app.include_router(auth.router)
 
 query_service = QueryService()
 document_service = DocumentService()
+rag_pipeline = better_retrieval_service.RAGPipeline()
 
 
 @app.on_event("shutdown")
@@ -86,8 +87,7 @@ async def ask_question(
     _ = request
     try:
         user_id = current_user["user_id"]
-        pipeline = better_retrieval_service.RAGPipeline()
-        result = await pipeline.process_query(
+        result = await rag_pipeline.process_query(
             query=body.query,
             space_id=body.space_id,
             user_id=user_id,
