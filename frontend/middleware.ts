@@ -6,7 +6,14 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Define public routes that don't require authentication
-  const publicRoutes = ['/login', '/auth/callback', '/auth/error'];
+  const publicRoutes = [
+    '/login',
+    '/auth/callback',
+    '/auth/error',
+    '/robots.txt',
+    '/sitemap.xml',
+    '/llms.txt',
+  ];
   const isPublicRoute = pathname === '/' || publicRoutes.some(route => pathname.startsWith(route));
 
   if (!token && !isPublicRoute) {
