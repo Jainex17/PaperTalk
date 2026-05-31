@@ -24,8 +24,8 @@ export default function Navbar() {
         <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
           Features
         </Link>
-        <Link href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-          Pricing
+        <Link href="#faq" className="text-muted-foreground hover:text-foreground transition-colors">
+          FAQ
         </Link>
       </div>
 
