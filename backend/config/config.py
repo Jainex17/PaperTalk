@@ -22,7 +22,6 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY1: str = ""
     EMBEDDING_MODEL: str = "gemini-embedding-001"
     EMBEDDING_DIMENSION: int = 768
-    ANSWER_PROVIDER: str = "openrouter"
 
 try:
     settings = Settings()

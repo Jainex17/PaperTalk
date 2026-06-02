@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class AIService:
 
     def __init__(self):
-        self._init_provider(settings.ANSWER_PROVIDER)
+        self._init_provider("openrouter")
 
     def _init_provider(self, provider: str):
         self.provider = provider.lower()
