@@ -54,13 +54,6 @@ class AuthService:
             client=cls.get_httpx_client()
         )
 
-# Register Google OAuth when the module is loaded
-AuthService.register_google_oauth()
-
-
-class AuthService:
-    """Service for handling Google OAuth authentication."""
-
     @staticmethod
     async def get_google_oauth_client():
         """Get configured Google OAuth client."""
@@ -118,3 +111,7 @@ class AuthService:
         except Exception as e:
             logger.error(f"Error processing Google user: {str(e)}", exc_info=True)
             raise
+
+
+# Register Google OAuth when the module is loaded
+AuthService.register_google_oauth()

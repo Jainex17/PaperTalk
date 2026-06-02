@@ -12,21 +12,25 @@ from config.config import settings
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = settings.DATABASE_URL
+EMBEDDING_DIMENSION = settings.EMBEDDING_DIMENSION
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    connect_args={
+engine_kwargs = {
+    "pool_size": 10,
+    "max_overflow": 20,
+    "pool_pre_ping": True,
+    "pool_recycle": 3600,
+}
+
+if DATABASE_URL.startswith("postgresql"):
+    engine_kwargs["connect_args"] = {
         "connect_timeout": 10,
         "keepalives": 1,
         "keepalives_idle": 30,
         "keepalives_interval": 10,
         "keepalives_count": 5,
     }
-)
+
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
@@ -68,11 +72,16 @@ class Document(Base):
     chunk_index = Column(Integer, nullable=False)
     space_id = Column(String, ForeignKey('spaces.id'), nullable=False, index=True)
     text = Column(Text, nullable=False)
-    embedding = Column(Vector(768), nullable=False)
+    embedding = Column(Vector(EMBEDDING_DIMENSION), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=sql_text("now()"))
 
     __table_args__ = (
-        Index('ix_documents_space_id_embedding', 'space_id', 'embedding', postgresql_using='ivfflat', postgresql_ops={'embedding': 'vector_l2_ops'}),
+        Index(
+            'ix_documents_embedding',
+            'embedding',
+            postgresql_using='ivfflat',
+            postgresql_ops={'embedding': 'vector_l2_ops'},
+        ),
     )
 
 Base.metadata.create_all(engine)

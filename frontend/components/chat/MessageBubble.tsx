@@ -51,15 +51,15 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     p: ({ ...props }) => <p className="leading-relaxed mb-4 text-foreground" {...props} />,
     hr: ({ ...props }) => <hr className="my-6 border-border" {...props} />,
     table: ({ ...props }) => (
-      <div className="overflow-x-auto my-4">
-        <table {...props} />
+      <div className="overflow-x-auto my-4 w-full">
+        <table className="w-full border-collapse text-sm border border-border rounded-lg shadow-sm" {...props} />
       </div>
     ),
-    thead: ({ ...props }) => <thead {...props} />,
+    thead: ({ ...props }) => <thead className="bg-gradient-to-r from-primary to-chart-2" {...props} />,
     tbody: ({ ...props }) => <tbody {...props} />,
-    tr: ({ ...props }) => <tr {...props} />,
-    th: ({ ...props }) => <th {...props} />,
-    td: ({ ...props }) => <td {...props} />,
+    tr: ({ ...props }) => <tr className="border-b border-border last:border-b-0 even:bg-muted" {...props} />,
+    th: ({ ...props }) => <th className="p-3 text-left font-semibold text-primary-foreground" {...props} />,
+    td: ({ ...props }) => <td className="p-3 text-foreground align-top" {...props} />,
     code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { className?: string }) => {
       const isInline = !className;
       return isInline ? (
@@ -150,8 +150,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       // Fix spacing issues: remove extra spaces before punctuation
       cleanPara = cleanPara.replace(/\s+([.,!?;:])/g, '$1');
 
-      // Fix multiple spaces
-      cleanPara = cleanPara.replace(/\s+/g, ' ').trim();
+      // Fix multiple spaces (preserve newlines for markdown tables, lists, etc.)
+      cleanPara = cleanPara.replace(/[ \t]+/g, ' ').trim();
 
       // Get unique citations
       const uniqueCitations = [...new Set(citations)];

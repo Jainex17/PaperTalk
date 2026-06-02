@@ -6,6 +6,8 @@ class AskRequest(BaseModel):
     space_id: str = Field(..., description="ID of the space to query")
     query: str = Field(..., min_length=1, description="User's question")
     is_first_message: bool = Field(default=False, description="Flag to clear chat history")
+    answer_provider: Optional[str] = Field(default=None, description="Model provider override: 'openrouter' or 'gemini'")
+    answer_model: Optional[str] = Field(default=None, description="Model name override")
 
 
 class RenameSpaceRequest(BaseModel):

@@ -28,7 +28,7 @@ def extract_text(file_path: str) -> Optional[str]:
 
 def _extract_from_text_file(file_path: str) -> str:
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-        return f.read()
+        return f.read().replace("\x00", "")
 
 
 def _extract_from_pdf(file_path: str) -> str:
@@ -45,7 +45,7 @@ def _extract_from_pdf(file_path: str) -> str:
         if page_text and page_text.strip():
             text_parts.append(page_text)
 
-    return "\n".join(text_parts)
+    return "\n".join(text_parts).replace("\x00", "")
 
 
 def chunk_text(
@@ -53,6 +53,7 @@ def chunk_text(
     chunk_tokens: int = CHUNK_TOKENS,
     overlap: int = CHUNK_OVERLAP
 ) -> List[str]:
+    text = text.replace("\x00", "")
     encoder = tiktoken.get_encoding(TIKTOKEN_ENCODING)
     tokens = encoder.encode(text)
     chunks = []

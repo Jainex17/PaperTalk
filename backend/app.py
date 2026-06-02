@@ -67,8 +67,8 @@ rag_pipeline = better_retrieval_service.RAGPipeline()
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup resources on shutdown."""
-    from services.auth_service import httpx_client
-    await httpx_client.aclose()
+    from services.auth_service import AuthService
+    await AuthService.close_httpx_client()
     logger.info("Closed httpx client")
 
 
@@ -91,6 +91,8 @@ async def ask_question(
             query=body.query,
             space_id=body.space_id,
             user_id=user_id,
+            provider=body.answer_provider,
+            model=body.answer_model,
         )
         return result
 
@@ -102,7 +104,14 @@ async def ask_question(
         )
 
     except Exception as e:
-        logger.error(f"Error processing query: {str(e)}", exc_info=True)
+        error_msg = str(e)
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg or "quota" in error_msg.lower():
+            logger.warning(f"Quota exceeded: {error_msg}")
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="API quota exceeded. The selected provider has run out of credits. Please try again later or switch to a different provider."
+            )
+        logger.error(f"Error processing query: {error_msg}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred processing your request"

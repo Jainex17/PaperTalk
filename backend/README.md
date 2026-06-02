@@ -11,8 +11,8 @@ PaperTalk lets you upload multiple documents (PDF, DOCX, TXT) and ask questions 
 ### How does it work?
 - The user uploads documents.
 - The text is extracted and split into chunks.
-- Embeddings are created for each chunk and stored in a vector database.
-- When a user asks a question, an embedding is created for the question and the most similar chunks are retrieved from the vector database.
+- Embeddings are created for each chunk through the Gemini Embeddings API and stored in a vector database.
+- When a user asks a question, a query embedding is created through the Gemini Embeddings API and the most similar chunks are retrieved from the vector database.
 - The LLM answers the question based on the retrieved chunks.
 - Pretty simple, right?
 

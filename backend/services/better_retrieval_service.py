@@ -122,7 +122,9 @@ class SynthesisService:
         self,
         query: str,
         search_results: Dict[str, List[Dict[str, Any]]],
-        strategy: SearchStrategy
+        strategy: SearchStrategy,
+        provider: str = None,
+        model: str = None,
     ) -> Dict[str, Any]:
         """
         Synthesize final answer from all search results
@@ -148,7 +150,7 @@ class SynthesisService:
             context=context
         )
 
-        answer = self.ai_service.generate_response(prompt)
+        answer = self.ai_service.generate_response(prompt, provider=provider, model=model)
 
         return {
             "answer": answer,
@@ -180,7 +182,9 @@ class RAGPipeline:
         self,
         query: str,
         space_id: str,
-        user_id: str
+        user_id: str,
+        provider: str = None,
+        model: str = None,
     ) -> Dict[str, Any]:
         """
         Main pipeline execution
@@ -203,7 +207,9 @@ class RAGPipeline:
             result = self.synthesis_service.synthesize_answer(
                 query=query,
                 search_results=search_results,
-                strategy=strategy
+                strategy=strategy,
+                provider=provider,
+                model=model,
             )
             logger.info("Pipeline complete")
 

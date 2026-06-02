@@ -18,6 +18,8 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
   const [hoveredPrompt, setHoveredPrompt] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [answerProvider, setAnswerProvider] = useState<'openrouter' | 'gemini'>('openrouter');
+  const [answerModel, setAnswerModel] = useState<string>('openai/gpt-oss-20b:free');
 
   const { setCurrentSpace } = useSpace();
   const { messages, loading, sendMessage, clearMessages } = useMessages(spaceid);
@@ -43,7 +45,7 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
 
     const messageToSend = input;
     setInput('');
-    await sendMessage(messageToSend);
+    await sendMessage(messageToSend, answerProvider, answerModel);
   };
 
   const handleHoverPrompt = (prompt: string) => {
@@ -69,6 +71,10 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
                 onSend={handleSendMessage}
                 loading={loading}
                 placeholder={hoveredPrompt ? hoveredPrompt : "Ask a question about your documents..."}
+                provider={answerProvider}
+                model={answerModel}
+                onProviderChange={setAnswerProvider}
+                onModelChange={setAnswerModel}
               />
               <SuggestedPrompts onSelectPrompt={setInput} onHoverPrompt={handleHoverPrompt} />
             </div>
@@ -98,6 +104,10 @@ export function ChatInterface({ spaceid }: ChatInterfaceProps) {
               onSend={handleSendMessage}
               loading={loading}
               placeholder={hoveredPrompt ? hoveredPrompt : "Ask a question about your documents..."}
+              provider={answerProvider}
+              model={answerModel}
+              onProviderChange={setAnswerProvider}
+              onModelChange={setAnswerModel}
             />
           </div>
         </div>

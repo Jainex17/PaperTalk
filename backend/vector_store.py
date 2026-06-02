@@ -3,7 +3,6 @@ import uuid
 from datetime import datetime
 from typing import List, Dict, Any
 
-from sentence_transformers import SentenceTransformer
 from sqlalchemy import func, cast, text
 from pgvector.sqlalchemy import Vector
 from google import genai
@@ -12,19 +11,25 @@ from db_utils import get_db_session, Document, Spaces, verify_space_access
 from constants import DEFAULT_SPACE_NAME
 from config.config import settings
 from prompts import CLASSIFICATION_PROMPT_TEMPLATE
+from services.embedding_service import GeminiEmbeddingService
 
 logger = logging.getLogger(__name__)
 
-# Lazy load embedding model with caching
-_embed_model = None
+# Lazy load embedding service with caching
+_embedding_service = None
 
-def get_embed_model():
-    global _embed_model
-    if _embed_model is None:
-        logger.info("Loading embedding model (first use)...")
-        _embed_model = SentenceTransformer("all-mpnet-base-v2")
-        logger.info("Embedding model loaded")
-    return _embed_model
+
+def get_embedding_service() -> GeminiEmbeddingService:
+    global _embedding_service
+    if _embedding_service is None:
+        logger.info("Initializing Gemini embedding service (first use)...")
+        _embedding_service = GeminiEmbeddingService(
+            api_key=settings.GEMINI_API_KEY,
+            model_name=settings.EMBEDDING_MODEL,
+            output_dimensionality=settings.EMBEDDING_DIMENSION,
+        )
+        logger.info("Gemini embedding service initialized")
+    return _embedding_service
 
 genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
@@ -51,8 +56,13 @@ def upload_document(chunks: List[str], space_id: str, user_id: str, filename: st
                 # Space exists but doesn't belong to this user
                 raise ValueError(f"Unauthorized: Space {space_id} does not belong to user {user_id}")
 
-            for i, chunk in enumerate(chunks):
-                embedding = get_embed_model().encode(chunk).tolist()
+            embeddings = get_embedding_service().embed_documents(chunks, title=filename)
+            if len(embeddings) != len(chunks):
+                raise ValueError(
+                    f"Embedding provider returned {len(embeddings)} vectors for {len(chunks)} chunks"
+                )
+
+            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 doc = Document(
                     doc_id=f"doc_{file_id}_{i}",
                     original_file_id=filename,
@@ -83,7 +93,7 @@ def query_documents_hybrid(
         has_access = verify_space_access(space_id, user_id)
         if not has_access:
             raise ValueError(f"Unauthorized: User {user_id} does not have access to space {space_id}")
-    query_embedding = get_embed_model().encode([query])[0].tolist()
+    query_embedding = get_embedding_service().embed_query(query)
 
     with get_db_session() as session:
         semantic_results = (
@@ -92,7 +102,10 @@ def query_documents_hybrid(
                 Document.text,
                 Document.chunk_index,
                 Document.original_file_id.label("filename"),
-                func.l2_distance(Document.embedding, cast(query_embedding, Vector(768))).label("distance"),
+                func.l2_distance(
+                    Document.embedding,
+                    cast(query_embedding, Vector(settings.EMBEDDING_DIMENSION)),
+                ).label("distance"),
             )
             .filter(Document.space_id == space_id)
             .order_by("distance")

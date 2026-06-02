@@ -24,29 +24,24 @@ PaperTalk lets you upload PDFs/TXT into personal Spaces and chat with them. Unde
 
 ## Quick start
 
-Prereqs: Python 3.11+, Node 18+, PostgreSQL (with pgvector), Google OAuth creds, Gemini API key.
+Prereqs: Python 3.11+, Bun, PostgreSQL (with pgvector), Google OAuth creds, Gemini API key.
 
 - Create env files: backend `.env`, frontend `.env.local` (DB URL, OAuth, JWT, Gemini key, etc.).
 
-Backend
+From the repo root:
+
 ```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app:app --reload --port 8000
+bun setup
+bun dev
 ```
 
-Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+`bun setup` installs the root/frontend Bun packages, creates `backend/.venv`, and installs the backend Python dependencies.
 
 Open `http://localhost:3000`.
 
 ## Tech
 
-FastAPI + PostgreSQL/pgvector, Next.js + React + Tailwind, Sentence-Transformers for embeddings, Gemini for generation.
+FastAPI + PostgreSQL/pgvector, Next.js + React + Tailwind, Gemini embeddings for retrieval, Gemini for generation.
 
 ## Notes
 
